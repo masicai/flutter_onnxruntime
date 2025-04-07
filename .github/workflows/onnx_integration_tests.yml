@@ -33,7 +33,7 @@ jobs:
           sudo apt-get update
           # Install basic build dependencies
           sudo apt-get install -y libgtk-3-dev libx11-dev pkg-config cmake ninja-build libblkid-dev xvfb
-          # Install OpenGL dependencies (updated package names for newer Ubuntu)
+          # Install OpenGL dependencies
           sudo apt-get install -y libegl1 libgl1 libxcb-xinerama0 libglu1-mesa libgl1-mesa-dri
           # Check installed GL/EGL libraries
           ls -la /usr/lib/x86_64-linux-gnu/libEGL* || echo "No EGL libs found in expected location"
@@ -46,23 +46,54 @@ jobs:
 
       - name: Run integration tests on Linux with Xvfb
         run: |
-          # Build the app first to ensure the plugin is properly compiled
+          # Create a simple wrapper app in the example directory
           cd example
-          flutter build linux --debug
-
-          # Create a simple Flutter app to run the test (ensures proper test discovery)
-          cat > integration_test/test_driver.dart << 'EOL'
-          import 'package:integration_test/integration_test_driver.dart';
-
-          Future<void> main() => integrationDriver();
+          
+          # Create a minimal flutter app with a main.dart that invokes the integration test
+          mkdir -p test_app
+          cd test_app
+          
+          # Initialize Flutter project
+          flutter create --platforms=linux .
+          
+          # Copy the integration test to this project
+          mkdir -p integration_test
+          cp ../integration_test/onnxruntime_integration_test.dart integration_test/
+          
+          # Copy the model to the assets directory
+          mkdir -p assets/models
+          cp ../assets/models/addition_model.ort assets/models/
+          
+          # Update pubspec.yaml to include the assets and dependencies
+          cat > pubspec.yaml << 'EOL'
+          name: onnxruntime_test_app
+          description: Test app for ONNX Runtime integration tests
+          publish_to: 'none'
+          version: 1.0.0+1
+          
+          environment:
+            sdk: '>=3.0.0 <4.0.0'
+          
+          dependencies:
+            flutter:
+              sdk: flutter
+            flutter_onnxruntime:
+              path: ../..
+            integration_test:
+              sdk: flutter
+            flutter_test:
+              sdk: flutter
+              
+          flutter:
+            assets:
+              - assets/models/
           EOL
-
-          # Use xvfb-run to provide a virtual display
-          # Use the integration_driver approach which is more reliable
-          xvfb-run --auto-servernum flutter drive \
-            --driver=integration_test/test_driver.dart \
-            --target=integration_test/onnxruntime_integration_test.dart \
-            -d linux
+          
+          # Update dependencies
+          flutter pub get
+          
+          # Use xvfb-run to run the integration test
+          xvfb-run --auto-servernum flutter test integration_test/onnxruntime_integration_test.dart -d linux --no-sound-null-safety
 
   macos_integration_test:
     runs-on: macos-latest
@@ -92,19 +123,8 @@ jobs:
 
       - name: Run integration tests on macOS
         run: |
-          # Build the app first to ensure the plugin is properly compiled
+          # Use the existing example app
           cd example
-          flutter build macos --debug
-
-          # Create a simple Flutter app to run the test (ensures proper test discovery)
-          cat > integration_test/test_driver.dart << 'EOL'
-          import 'package:integration_test/integration_test_driver.dart';
-
-          Future<void> main() => integrationDriver();
-          EOL
-
-          # Run tests using the integration_driver approach
-          flutter drive \
-            --driver=integration_test/test_driver.dart \
-            --target=integration_test/onnxruntime_integration_test.dart \
-            -d macos 
+          
+          # Run the integration test directly
+          flutter test integration_test/onnxruntime_integration_test.dart -d macos 
