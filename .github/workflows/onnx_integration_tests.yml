@@ -20,7 +20,9 @@ jobs:
           channel: 'stable'
           
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          cd example
+          flutter pub get
         
       - name: Install Linux dependencies
         run: |
@@ -33,7 +35,7 @@ jobs:
       - name: Run integration tests on Linux
         run: |
           cd example
-          flutter test ../test/integration/onnxruntime_integration_test.dart -d linux
+          flutter test integration_test/onnxruntime_integration_test.dart -d linux
           
   macos_integration_test:
     runs-on: macos-latest
@@ -48,7 +50,9 @@ jobs:
           channel: 'stable'
           
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          cd example
+          flutter pub get
       
       - name: Enable macOS desktop support
         run: flutter config --enable-macos-desktop
@@ -56,4 +60,4 @@ jobs:
       - name: Run integration tests on macOS
         run: |
           cd example
-          flutter test ../test/integration/onnxruntime_integration_test.dart -d macos 
+          flutter test integration_test/onnxruntime_integration_test.dart -d macos 
