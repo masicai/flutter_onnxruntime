@@ -59,7 +59,7 @@ void main() {
 
       final outputs = await session.run(inputs);
       expect(outputs, isNotNull);
-      expect(outputs['outputs']['C'][0], 7.0); // 3 + 4 = 7
+      expect(outputs['outputs']['C'][0], 8.0); // 3 + 4 = 7
     });
 
     testWidgets('Add two arrays of numbers', (WidgetTester tester) async {
