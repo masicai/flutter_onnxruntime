@@ -49,51 +49,16 @@ jobs:
           # Create a simple wrapper app in the example directory
           cd example
           
-          # Create a minimal flutter app with a main.dart that invokes the integration test
-          mkdir -p test_app
-          cd test_app
+          # Create the test driver directory and file
+          mkdir -p test_driver
+          cat > test_driver/integration_test.dart << 'EOL'
+          import 'package:integration_test/integration_test_driver.dart';
           
-          # Initialize Flutter project
-          flutter create --platforms=linux .
-          
-          # Copy the integration test to this project
-          mkdir -p integration_test
-          cp ../integration_test/onnxruntime_integration_test.dart integration_test/
-          
-          # Copy the model to the assets directory
-          mkdir -p assets/models
-          cp ../assets/models/addition_model.ort assets/models/
-          
-          # Update pubspec.yaml to include the assets and dependencies
-          cat > pubspec.yaml << 'EOL'
-          name: onnxruntime_test_app
-          description: Test app for ONNX Runtime integration tests
-          publish_to: 'none'
-          version: 1.0.0+1
-          
-          environment:
-            sdk: '>=3.0.0 <4.0.0'
-          
-          dependencies:
-            flutter:
-              sdk: flutter
-            flutter_onnxruntime:
-              path: ../..
-            integration_test:
-              sdk: flutter
-            flutter_test:
-              sdk: flutter
-              
-          flutter:
-            assets:
-              - assets/models/
+          Future<void> main() => integrationDriver();
           EOL
           
-          # Update dependencies
-          flutter pub get
-          
-          # Use xvfb-run to run the integration test
-          xvfb-run --auto-servernum flutter test integration_test/onnxruntime_integration_test.dart -d linux
+          # Run the integration test with flutter drive
+          xvfb-run --auto-servernum flutter drive --driver=test_driver/integration_test.dart --target=integration_test/onnxruntime_integration_test.dart -d linux
 
   macos_integration_test:
     runs-on: macos-latest
@@ -126,5 +91,13 @@ jobs:
           # Use the existing example app
           cd example
           
-          # Run the integration test directly
-          flutter test integration_test/onnxruntime_integration_test.dart -d macos 
+          # Create the test driver directory and file if it doesn't exist
+          mkdir -p test_driver
+          cat > test_driver/integration_test.dart << 'EOL'
+          import 'package:integration_test/integration_test_driver.dart';
+          
+          Future<void> main() => integrationDriver();
+          EOL
+          
+          # Run the integration test with flutter drive
+          flutter drive --driver=test_driver/integration_test.dart --target=integration_test/onnxruntime_integration_test.dart -d macos 
