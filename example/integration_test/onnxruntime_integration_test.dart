@@ -64,8 +64,8 @@ void main() {
 
     testWidgets('Add two arrays of numbers', (WidgetTester tester) async {
       final inputs = {
-        'A': [1.0, 2.0, 3.0],
-        'B': [4.0, 5.0, 6.0],
+        'A': [1.1, 2.2, 3.3],
+        'B': [4.4, 5.5, 6.6],
       };
 
       final outputs = await session.run(inputs);
@@ -73,9 +73,9 @@ void main() {
 
       final result = outputs['outputs']['C'];
       expect(result.length, 3);
-      expect(result[0], 5.0); // 1 + 4 = 5
-      expect(result[1], 7.0); // 2 + 5 = 7
-      expect(result[2], 9.0); // 3 + 6 = 9
+      expect(result[0], closeTo(5.5, 1e-5)); // 1.1 + 4.4 ≈ 5.5
+      expect(result[1], closeTo(7.7, 1e-5)); // 2.2 + 5.5 ≈ 7.7
+      expect(result[2], closeTo(9.9, 1e-5)); // 3.3 + 6.6 ≈ 9.9
     });
   });
 }
