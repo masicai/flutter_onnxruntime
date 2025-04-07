@@ -2,12 +2,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
-import 'package:flutter/widgets.dart';
 
 void main() {
-  // Initialize both bindings to ensure everything is set up properly
+  // Initialize integration test binding
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  WidgetsFlutterBinding.ensureInitialized();
 
   group('ONNX Runtime Integration Tests', () {
     late OnnxRuntime onnxRuntime;
