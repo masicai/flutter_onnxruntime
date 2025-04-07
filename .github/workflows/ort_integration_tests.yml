@@ -1,0 +1,42 @@
+name: ONNX Runtime Integration Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  macos_integration_test:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: 'stable'
+
+      - name: Enable macOS desktop support
+        run: flutter config --enable-macos-desktop
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          cd example
+          flutter pub get
+
+      - name: Verify model file exists
+        run: |
+          find . -name "addition_model.ort" || echo "Model not found!"
+          ls -la example/assets/models || echo "Directory not found!"
+
+      - name: Run integration tests on macOS
+        run: |
+          # Use the existing example app
+          cd example
+          
+          # Run the integration test directly
+          flutter test integration_test/onnxruntime_integration_test.dart -d macos 
