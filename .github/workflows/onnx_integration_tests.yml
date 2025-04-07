@@ -93,7 +93,7 @@ jobs:
           flutter pub get
           
           # Use xvfb-run to run the integration test
-          xvfb-run --auto-servernum flutter test integration_test/onnxruntime_integration_test.dart -d linux --no-sound-null-safety
+          xvfb-run --auto-servernum flutter test integration_test/onnxruntime_integration_test.dart -d linux
 
   macos_integration_test:
     runs-on: macos-latest
