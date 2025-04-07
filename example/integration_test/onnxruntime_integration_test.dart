@@ -2,9 +2,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
+import 'package:flutter/widgets.dart';
 
 void main() {
+  // Initialize both bindings to ensure everything is set up properly
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
 
   group('ONNX Runtime Integration Tests', () {
     late OnnxRuntime onnxRuntime;
@@ -12,9 +15,8 @@ void main() {
 
     setUpAll(() async {
       onnxRuntime = OnnxRuntime();
-
-      // Use the asset directly
       try {
+        // Load model from assets
         session = await onnxRuntime.createSessionFromAsset('assets/models/addition_model.ort');
       } catch (e) {
         fail('Failed to create session: $e');
@@ -22,11 +24,7 @@ void main() {
     });
 
     tearDownAll(() async {
-      try {
-        await session.close();
-      } catch (e) {
-        fail('Error closing session: $e');
-      }
+      await session.close();
     });
 
     testWidgets('Get platform version', (WidgetTester tester) async {
@@ -38,7 +36,6 @@ void main() {
     testWidgets('Get model metadata', (WidgetTester tester) async {
       final metadata = await session.getMetadata();
       expect(metadata, isNotNull);
-      // The addition model may have limited metadata, but we can check it exists
       expect(metadata.producerName, isNotNull);
     });
 

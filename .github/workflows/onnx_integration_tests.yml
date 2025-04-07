@@ -18,9 +18,13 @@ jobs:
         with:
           flutter-version: '3.29.0'
           channel: 'stable'
+      
+      - name: Enable Linux desktop support
+        run: flutter config --enable-linux-desktop
           
       - name: Install dependencies
         run: |
+          flutter pub get
           cd example
           flutter pub get
         
@@ -28,13 +32,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libx11-dev pkg-config cmake ninja-build libblkid-dev
-      
-      - name: Enable Linux desktop support
-        run: flutter config --enable-linux-desktop
-      
+
+      - name: Verify model file exists
+        run: |
+          find . -name "addition_model.ort" || echo "Model not found!"
+          ls -la example/assets/models || echo "Directory not found!"
+          
       - name: Run integration tests on Linux
         run: |
+          # Build the app first to ensure the plugin is properly compiled
           cd example
+          flutter build linux --debug
+          # Run the integration tests directly from the example app
           flutter test integration_test/onnxruntime_integration_test.dart -d linux
           
   macos_integration_test:
@@ -48,16 +57,25 @@ jobs:
         with:
           flutter-version: '3.29.0'
           channel: 'stable'
-          
-      - name: Install dependencies
-        run: |
-          cd example
-          flutter pub get
       
       - name: Enable macOS desktop support
         run: flutter config --enable-macos-desktop
+          
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          cd example
+          flutter pub get
+
+      - name: Verify model file exists
+        run: |
+          find . -name "addition_model.ort" || echo "Model not found!"
+          ls -la example/assets/models || echo "Directory not found!"
       
       - name: Run integration tests on macOS
         run: |
+          # Build the app first to ensure the plugin is properly compiled
           cd example
+          flutter build macos --debug
+          # Run the integration tests directly from the example app
           flutter test integration_test/onnxruntime_integration_test.dart -d macos 
