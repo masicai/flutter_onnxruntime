@@ -2,25 +2,16 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
-import 'package:flutter_onnxruntime_example/main.dart' as app;
 
 void main() {
   // Initialize integration test binding
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize the app in case we're running with flutter drive
-  testWidgets('Initialize app', (WidgetTester tester) async {
-    app.main();
-    await tester.pumpAndSettle();
-  });
 
   group('ONNX Runtime Integration Tests', () {
     late OnnxRuntime onnxRuntime;
     late OrtSession session;
 
     setUpAll(() async {
-      // Initialize the app
-      app.main();
       onnxRuntime = OnnxRuntime();
       try {
         // Load model from assets
