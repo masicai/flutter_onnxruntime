@@ -79,8 +79,16 @@ jobs:
           profile: Nexus 6
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            # Use the existing example app
-            cd example
-            
-            # Run the integration test on the Android emulator
-            flutter test integration_test/onnxruntime_integration_test.dart -d android 
+            # In the android_integration_test job
+            script: |
+              # Use the existing example app
+              cd example
+              
+              # Create test_driver directory and add integration test driver
+              mkdir -p test_driver
+              echo 'import "package:integration_test/integration_test_driver.dart";
+
+              Future<void> main() => integrationDriver();' > test_driver/integration_test.dart
+              
+              # Run the integration test on the Android emulator with driver
+              flutter drive --driver=test_driver/integration_test.dart --target=integration_test/onnxruntime_integration_test.dart
