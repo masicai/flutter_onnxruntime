@@ -27,6 +27,8 @@ void main() {
 
     testWidgets('Get platform version', (WidgetTester tester) async {
       final version = await onnxRuntime.getPlatformVersion();
+      // ignore: avoid_print
+      print('Platform Version: $version');
       expect(version, isNotNull);
       expect(version!.isNotEmpty, true);
     });
