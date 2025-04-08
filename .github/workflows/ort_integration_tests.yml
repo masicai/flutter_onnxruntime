@@ -81,14 +81,38 @@ jobs:
           script: |
             set -e # Exit immediately if a command exits with a non-zero status
 
-            echo "--- Navigating to example directory ---"
+            # Use the existing example app
             cd example
-            pwd # Verify current directory
-
-            echo "--- Creating test_driver directory ---"
+            
+            # Verify that files exist
+            echo "Checking integration test file"
+            ls -la integration_test/ || echo "Integration test directory not found"
+            
+            # Use alternate method for Android: Make a custom app that runs the integration test
+            echo "Creating integration test app entry point"
+            cat > integration_test/app_test.dart << 'EOT'
+            import 'package:flutter/material.dart';
+            import 'package:flutter_test/flutter_test.dart';
+            import 'package:integration_test/integration_test.dart';
+            import 'onnxruntime_integration_test.dart' as test;
+            
+            void main() {
+              IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+              test.main();
+            }
+            EOT
+            
+            # Create the driver
             mkdir -p test_driver
-            ls -ld test_driver # Verify directory creation
-
-            echo "--- Running flutter drive ---"
-            flutter drive --driver=test_driver/integration_test.dart --target=integration_test/onnxruntime_integration_test.dart
-            echo "--- Flutter drive finished ---"
+            echo 'import "package:integration_test/integration_test_driver.dart";
+            
+            Future<void> main() => integrationDriver();' > test_driver/integration_test.dart
+            
+            # Show connected devices
+            flutter devices
+            
+            # Run with the driver
+            flutter drive \
+              --driver=test_driver/integration_test.dart \
+              --target=integration_test/app_test.dart \
+              -d android
