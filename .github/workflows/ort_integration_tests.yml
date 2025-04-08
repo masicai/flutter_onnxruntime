@@ -74,8 +74,10 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 31
-          arch: x86_64
+          arch: arm64-v8a
+          target: google_apis
           profile: Nexus 6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             # Use the existing example app
             cd example
