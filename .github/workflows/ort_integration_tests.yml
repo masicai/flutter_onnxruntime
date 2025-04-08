@@ -89,15 +89,6 @@ jobs:
             mkdir -p test_driver
             ls -ld test_driver # Verify directory creation
 
-            echo "--- Creating integration_test.dart file ---"
-            printf '%s\n' \
-              "import 'package:integration_test/integration_test_driver.dart';" \
-              "" \
-              "Future<void> main() => integrationDriver();" > test_driver/integration_test.dart
-
-            echo "--- Verifying integration_test.dart content ---"
-            cat test_driver/integration_test.dart # Verify file content
-
             echo "--- Running flutter drive ---"
             flutter drive --driver=test_driver/integration_test.dart --target=integration_test/onnxruntime_integration_test.dart
             echo "--- Flutter drive finished ---"
