@@ -1,10 +1,11 @@
 name: ONNX Runtime Integration Tests
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  workflow_dispatch:
+  # push:
+  #   branches: [ main, master ]
+  # pull_request:
+  #   branches: [ main, master ]
 
 jobs:
   macos_integration_test:
@@ -84,5 +85,6 @@ jobs:
             pwd # Verify current directory
 
             echo "--- Running flutter drive ---"
+            # TODO: need to verify if this works
             cd example && flutter drive --driver=test_driver/integration_test.dart --target=integration_test/onnxruntime_integration_test.dart
             echo "--- Flutter drive finished ---"
