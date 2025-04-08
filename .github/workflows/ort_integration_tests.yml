@@ -84,5 +84,5 @@ jobs:
             pwd # Verify current directory
 
             echo "--- Running flutter drive ---"
-            flutter drive --driver=example/test_driver/integration_test.dart --target=example/integration_test/onnxruntime_integration_test.dart
+            cd example && flutter drive --driver=test_driver/integration_test.dart --target=integration_test/onnxruntime_integration_test.dart
             echo "--- Flutter drive finished ---"
