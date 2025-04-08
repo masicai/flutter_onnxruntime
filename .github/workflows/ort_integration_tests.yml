@@ -79,16 +79,25 @@ jobs:
           profile: Nexus 6
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            # Use the existing example app
+            set -e # Exit immediately if a command exits with a non-zero status
+
+            echo "--- Navigating to example directory ---"
             cd example
+            pwd # Verify current directory
 
-            # Create test_driver directory and add integration test driver
+            echo "--- Creating test_driver directory ---"
             mkdir -p test_driver
-            cat > test_driver/integration_test.dart << 'EOF'
-            import 'package:integration_test/integration_test_driver.dart';
+            ls -ld test_driver # Verify directory creation
 
-            Future<void> main() => integrationDriver();
-            EOF
+            echo "--- Creating integration_test.dart file ---"
+            printf '%s\n' \
+              "import 'package:integration_test/integration_test_driver.dart';" \
+              "" \
+              "Future<void> main() => integrationDriver();" > test_driver/integration_test.dart
 
-            # Run the integration test on the Android emulator with driver
+            echo "--- Verifying integration_test.dart content ---"
+            cat test_driver/integration_test.dart # Verify file content
+
+            echo "--- Running flutter drive ---"
             flutter drive --driver=test_driver/integration_test.dart --target=integration_test/onnxruntime_integration_test.dart
+            echo "--- Flutter drive finished ---"
