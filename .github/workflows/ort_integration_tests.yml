@@ -40,3 +40,45 @@ jobs:
           
           # Run the integration test directly
           flutter test integration_test/onnxruntime_integration_test.dart -d macos 
+
+  android_integration_test:
+    runs-on: macos-latest # macOS runner needed for Android emulator
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: 'stable'
+
+      - name: Setup Java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          cd example
+          flutter pub get
+
+      - name: Verify model file exists
+        run: |
+          find . -name "addition_model.ort" || echo "Model not found!"
+          ls -la example/assets/models || echo "Directory not found!"
+
+      - name: Start Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          arch: x86_64
+          profile: Nexus 6
+          script: |
+            # Use the existing example app
+            cd example
+            
+            # Run the integration test on the Android emulator
+            flutter test integration_test/onnxruntime_integration_test.dart -d android 
