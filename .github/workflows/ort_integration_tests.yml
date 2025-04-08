@@ -81,70 +81,58 @@ jobs:
           script: |
             set -e # Exit immediately if a command exits with a non-zero status
 
+            # Store absolute paths
+            WORKSPACE_DIR="$(pwd)"
+            EXAMPLE_DIR="$WORKSPACE_DIR/example"
+            
             # Check workspace structure
-            echo "Listing workspace root"
-            ls -la
+            echo "Listing workspace root ($WORKSPACE_DIR)"
+            ls -la "$WORKSPACE_DIR"
 
-            # Use the existing example app
-            cd example
+            # Create directories and navigate
+            echo "Creating integration test directories"
+            mkdir -p "$EXAMPLE_DIR/integration_test"
+            mkdir -p "$EXAMPLE_DIR/test_driver"
+            mkdir -p "$EXAMPLE_DIR/assets/models"
             
             # Check current directory content
             echo "Listing example directory content"
-            ls -la
+            ls -la "$EXAMPLE_DIR"
             
-            # Create integration_test directory if it doesn't exist
-            mkdir -p integration_test
+            # Create integration test file
+            echo "Creating integration test file"
+            cat > "$EXAMPLE_DIR/integration_test/onnxruntime_integration_test.dart" << 'EOT'
+            import 'package:flutter_test/flutter_test.dart';
+            import 'package:integration_test/integration_test.dart';
+            import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
             
-            # Check if the test file exists somewhere else in the repository
-            echo "Checking for integration test file in expected location"
-            cd ..
-            if [ -f "example/integration_test/onnxruntime_integration_test.dart" ]; then
-              echo "Test file found in example/integration_test"
-              # File already exists in the right place, no need to copy
-            else
-              echo "Creating integration test file from scratch"
-              # Create a basic integration test
-              cat > example/integration_test/onnxruntime_integration_test.dart << 'EOT'
-              import 'package:flutter_test/flutter_test.dart';
-              import 'package:integration_test/integration_test.dart';
-              import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
-              
-              void main() {
-                IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-              
-                testWidgets('Basic OnnxRuntime test', (WidgetTester tester) async {
-                  try {
-                    final plugin = OnnxRuntime();
-                    final version = await plugin.getPlatformVersion();
-                    expect(version, isNotNull);
-                    expect(version!.isNotEmpty, true);
-                    
-                    // Skip model loading test if running in CI where model may not be available
-                    print('Plugin version test passed');
-                  } catch (e) {
-                    print('Test exception: $e');
-                    rethrow;
-                  }
-                });
-              }
-              EOT
-            fi
+            void main() {
+              IntegrationTestWidgetsFlutterBinding.ensureInitialized();
             
-            # Return to example directory
-            cd example
+              testWidgets('Basic OnnxRuntime test', (WidgetTester tester) async {
+                try {
+                  final plugin = OnnxRuntime();
+                  final version = await plugin.getPlatformVersion();
+                  expect(version, isNotNull);
+                  expect(version!.isNotEmpty, true);
+                  
+                  // Skip model loading test if running in CI where model may not be available
+                  print('Plugin version test passed');
+                } catch (e) {
+                  print('Test exception: $e');
+                  rethrow;
+                }
+              });
+            }
+            EOT
             
-            # Ensure the assets directory exists for models
-            mkdir -p assets/models
+            # Create a dummy model file
+            echo "Creating dummy model file"
+            touch "$EXAMPLE_DIR/assets/models/addition_model.ort"
             
-            # Check if model file exists
-            if [ ! -f "assets/models/addition_model.ort" ]; then
-              echo "Model file not found, creating a dummy file for testing"
-              touch assets/models/addition_model.ort
-            fi
-            
-            # Use alternate method for Android: Make a custom app that runs the integration test
+            # Create test app entry point
             echo "Creating integration test app entry point"
-            cat > integration_test/app_test.dart << 'EOT'
+            cat > "$EXAMPLE_DIR/integration_test/app_test.dart" << 'EOT'
             import 'package:flutter/material.dart';
             import 'package:flutter_test/flutter_test.dart';
             import 'package:integration_test/integration_test.dart';
@@ -156,22 +144,31 @@ jobs:
             }
             EOT
             
-            # Create the driver
-            mkdir -p test_driver
-            echo 'import "package:integration_test/integration_test_driver.dart";
+            # Create the driver file
+            echo "Creating test driver file"
+            cat > "$EXAMPLE_DIR/test_driver/integration_test.dart" << 'EOT'
+            import 'package:integration_test/integration_test_driver.dart';
             
-            Future<void> main() => integrationDriver();' > test_driver/integration_test.dart
+            Future<void> main() => integrationDriver();
+            EOT
+            
+            # List all created files to verify
+            echo "Verifying created files:"
+            ls -la "$EXAMPLE_DIR/integration_test/"
+            ls -la "$EXAMPLE_DIR/test_driver/"
+            ls -la "$EXAMPLE_DIR/assets/models/"
             
             # Show connected devices
-            flutter devices
+            echo "Connected devices:"
+            cd "$EXAMPLE_DIR" && flutter devices
             
             # Ensure the app can be built
             echo "Building app to verify it can be built successfully"
-            flutter build apk --debug || echo "Warning: App build had issues, but proceeding with tests"
+            cd "$EXAMPLE_DIR" && flutter build apk --debug || echo "Warning: App build had issues, but proceeding with tests"
             
             # Run with the driver
             echo "Running integration tests with flutter drive"
-            flutter drive \
+            cd "$EXAMPLE_DIR" && flutter drive \
               --driver=test_driver/integration_test.dart \
               --target=integration_test/app_test.dart \
               -d android || {
