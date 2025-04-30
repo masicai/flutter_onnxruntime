@@ -1,7 +1,7 @@
 # The Flutter tooling requires that developers have CMake 3.10 or later
 # installed. You should not increase this version, as doing so will cause
 # the plugin to fail to compile for some customers of the plugin.
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.28)  # required by onnxruntime-extensions
 
 # Project-level configuration.
 set(PROJECT_NAME "flutter_onnxruntime")
@@ -161,6 +161,130 @@ if(NOT USE_SYSTEM_ONNXRUNTIME)
   set(flutter_onnxruntime_bundled_libraries ${ONNXRUNTIME_LIBRARY})
 endif()
 
+# === ONNX Runtime Extensions Configuration ===
+option(USE_ONNXRUNTIME_EXTENSIONS "Use ONNX Runtime Extensions" ON)
+
+if(USE_ONNXRUNTIME_EXTENSIONS)
+  set(ONNXRUNTIME_EXTENSIONS_LIBRARY "")
+  include(FetchContent)
+  
+  # Set up the version - either match ONNX Runtime or set a specific version
+  # You might want to check compatibility based on your needs
+  set(ONNXRUNTIME_EXTENSIONS_VERSION "0.14.0" CACHE STRING "ONNX Runtime Extensions version")
+  
+  message(STATUS "Using ONNX Runtime Extensions version: ${ONNXRUNTIME_EXTENSIONS_VERSION}")
+  
+  # Download onnxruntime-extensions repository
+  FetchContent_Declare(
+    onnxruntime_extensions
+    GIT_REPOSITORY https://github.com/microsoft/onnxruntime-extensions.git
+    GIT_TAG v${ONNXRUNTIME_EXTENSIONS_VERSION}
+  )
+  
+  # Configure the git submodule update command
+  FetchContent_GetProperties(onnxruntime_extensions)
+  if(NOT onnxruntime_extensions_POPULATED)
+    message(STATUS "Fetching ONNX Runtime Extensions...")
+    FetchContent_MakeAvailable(onnxruntime_extensions)
+    
+    # Build onnxruntime-extensions using the build.sh script
+    message(STATUS "Building ONNX Runtime Extensions...")
+    
+    # Ensure build.sh is executable
+    execute_process(
+      COMMAND chmod +x ${onnxruntime_extensions_SOURCE_DIR}/build.sh
+      WORKING_DIRECTORY ${onnxruntime_extensions_SOURCE_DIR}
+    )
+    
+    # Set up build parameters - using standard options for better compatibility
+    set(ONNXRUNTIME_EXTENSIONS_BUILD_OPTIONS
+      -DOCOS_BUILD_SHARED_LIB=ON
+      -DOCOS_ENABLE_UNIVERSE_OPS=ON
+      -DOCOS_ENABLE_SPM_TOKENIZER=ON
+      -DOCOS_ENABLE_SPM_TOKENIZER_FEATURES=ON
+      -DOCOS_BUILD_STATIC_LIB=OFF
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    )
+    
+    # Run the build script with shared library flag
+    execute_process(
+      COMMAND bash ./build.sh ${ONNXRUNTIME_EXTENSIONS_BUILD_OPTIONS}
+      WORKING_DIRECTORY ${onnxruntime_extensions_SOURCE_DIR}
+      RESULT_VARIABLE ONNXRUNTIME_EXTENSIONS_BUILD_RESULT
+      OUTPUT_VARIABLE ONNXRUNTIME_EXTENSIONS_BUILD_OUTPUT
+      ERROR_VARIABLE ONNXRUNTIME_EXTENSIONS_BUILD_ERROR
+    )
+    
+    if(NOT ONNXRUNTIME_EXTENSIONS_BUILD_RESULT EQUAL 0)
+      message(WARNING "Failed to build ONNX Runtime Extensions. Error code: ${ONNXRUNTIME_EXTENSIONS_BUILD_RESULT}")
+      message(STATUS "Build output: ${ONNXRUNTIME_EXTENSIONS_BUILD_OUTPUT}")
+      message(STATUS "Build error: ${ONNXRUNTIME_EXTENSIONS_BUILD_ERROR}")
+    else()
+      message(STATUS "Successfully built ONNX Runtime Extensions")
+    endif()
+    
+    # Find the built library - check multiple possible locations
+    set(ONNXRUNTIME_EXTENSIONS_LIB_NAMES 
+      "libortextensions.so"
+    )
+    
+    set(ONNXRUNTIME_EXTENSIONS_BUILD_DIRS
+      "${onnxruntime_extensions_SOURCE_DIR}/out/Linux/RelWithDebInfo/lib"
+      "${onnxruntime_extensions_SOURCE_DIR}/out/Linux/Release/lib"
+      "${onnxruntime_extensions_SOURCE_DIR}/out/RelWithDebInfo/lib"
+      "${onnxruntime_extensions_SOURCE_DIR}/out/Release/lib"
+    )
+    
+    # Set the include and library paths
+    set(ONNXRUNTIME_EXTENSIONS_INCLUDE_DIRS "${onnxruntime_extensions_SOURCE_DIR}/include")
+    
+    # Try to find the built library
+    foreach(DIR ${ONNXRUNTIME_EXTENSIONS_BUILD_DIRS})
+      foreach(LIB_NAME ${ONNXRUNTIME_EXTENSIONS_LIB_NAMES})
+        if(EXISTS "${DIR}/${LIB_NAME}")
+          set(ONNXRUNTIME_EXTENSIONS_LIBRARY "${DIR}/${LIB_NAME}")
+          message(STATUS "Found ONNX Runtime Extensions library: ${ONNXRUNTIME_EXTENSIONS_LIBRARY}")
+          break()
+        endif()
+      endforeach()
+      if(ONNXRUNTIME_EXTENSIONS_LIBRARY)
+        break()
+      endif()
+    endforeach()
+    
+    if(NOT ONNXRUNTIME_EXTENSIONS_LIBRARY)
+      # Try a more generic search using glob
+      file(GLOB_RECURSE ONNXRUNTIME_EXTENSIONS_LIB_CANDIDATES
+        "${onnxruntime_extensions_SOURCE_DIR}/out/**/lib/*ortextensions*${CMAKE_SHARED_LIBRARY_SUFFIX}"
+      )
+      
+      if(ONNXRUNTIME_EXTENSIONS_LIB_CANDIDATES)
+        list(GET ONNXRUNTIME_EXTENSIONS_LIB_CANDIDATES 0 ONNXRUNTIME_EXTENSIONS_LIBRARY)
+        message(STATUS "Found ONNX Runtime Extensions library through glob: ${ONNXRUNTIME_EXTENSIONS_LIBRARY}")
+      else()
+        message(WARNING "Could not find ONNX Runtime Extensions library in build directory")
+      endif()
+    endif()
+  endif()
+  
+  # Only add to bundled libs if we found the library
+  if(ONNXRUNTIME_EXTENSIONS_LIBRARY)
+    message(STATUS "Will bundle ONNX Runtime Extensions library: ${ONNXRUNTIME_EXTENSIONS_LIBRARY}")
+    list(APPEND flutter_onnxruntime_bundled_libraries ${ONNXRUNTIME_EXTENSIONS_LIBRARY})
+    add_definitions(-DONNXRUNTIME_EXTENSIONS_AVAILABLE)
+    
+    # Define the extension library path as a CMake variable that will be passed to the code
+    # Use file(REAL_PATH) to get the absolute canonical path to the library
+    file(REAL_PATH "${ONNXRUNTIME_EXTENSIONS_LIBRARY}" ONNXRUNTIME_EXTENSIONS_ABSOLUTE_PATH)
+    
+    # Pass the path as a compile definition
+    add_definitions(-DORT_EXTENSIONS_LIB_PATH="${ONNXRUNTIME_EXTENSIONS_ABSOLUTE_PATH}")
+    message(STATUS "Setting ONNX Runtime Extensions library path: ${ONNXRUNTIME_EXTENSIONS_ABSOLUTE_PATH}")
+  else()
+    message(STATUS "ONNX Runtime Extensions will not be bundled - using fallback mechanism")
+  endif()
+endif()
+
 # Any new source files that you add to the plugin should be added here.
 list(APPEND PLUGIN_SOURCES
   "src/flutter_onnxruntime_plugin.cc"
@@ -238,11 +362,21 @@ target_include_directories(${PLUGIN_NAME} PUBLIC
 # Add ONNX Runtime include directories
 target_include_directories(${PLUGIN_NAME} PRIVATE ${ONNXRUNTIME_INCLUDE_DIRS})
 
+# Add ONNX Runtime Extensions include directories if enabled
+if(USE_ONNXRUNTIME_EXTENSIONS AND ONNXRUNTIME_EXTENSIONS_INCLUDE_DIRS)
+  target_include_directories(${PLUGIN_NAME} PRIVATE ${ONNXRUNTIME_EXTENSIONS_INCLUDE_DIRS})
+endif()
+
 target_link_libraries(${PLUGIN_NAME} PRIVATE flutter)
 target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::GTK)
 
 # Link against ONNX Runtime
 target_link_libraries(${PLUGIN_NAME} PRIVATE ${ONNXRUNTIME_LIBRARIES})
+
+# Link against ONNX Runtime Extensions if available
+if(USE_ONNXRUNTIME_EXTENSIONS AND ONNXRUNTIME_EXTENSIONS_LIBRARY)
+  target_link_libraries(${PLUGIN_NAME} PRIVATE ${ONNXRUNTIME_EXTENSIONS_LIBRARY})
+endif()
 
 # Add a post-build command to copy ONNX Runtime libraries to the build directory
 if(NOT USE_SYSTEM_ONNXRUNTIME AND ONNXRUNTIME_LIBRARY)
@@ -254,15 +388,35 @@ if(NOT USE_SYSTEM_ONNXRUNTIME AND ONNXRUNTIME_LIBRARY)
   )
 endif()
 
+# Add a post-build command to copy ONNX Runtime Extensions library to the build directory
+if(USE_ONNXRUNTIME_EXTENSIONS AND ONNXRUNTIME_EXTENSIONS_LIBRARY)
+  add_custom_command(
+    TARGET ${PLUGIN_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      ${ONNXRUNTIME_EXTENSIONS_LIBRARY} $<TARGET_FILE_DIR:${PLUGIN_NAME}>
+    COMMENT "Copying ONNX Runtime Extensions library to build directory"
+  )
+endif()
+
 # List of absolute paths to libraries that should be bundled with the plugin.
 # This list could contain prebuilt libraries, or libraries created by an
 # external build triggered from this build file.
 if(NOT USE_SYSTEM_ONNXRUNTIME AND ONNXRUNTIME_LIBRARY)
   # When using the downloaded version, we need to bundle the library
   set(bundled_libs ${ONNXRUNTIME_LIBRARY})
+  
+  # Add ONNX Runtime Extensions if available
+  if(USE_ONNXRUNTIME_EXTENSIONS AND ONNXRUNTIME_EXTENSIONS_LIBRARY)
+    list(APPEND bundled_libs ${ONNXRUNTIME_EXTENSIONS_LIBRARY})
+  endif()
 else()
   # When using system library, don't bundle it
   set(bundled_libs "")
+  
+  # But still add ONNX Runtime Extensions if available
+  if(USE_ONNXRUNTIME_EXTENSIONS AND ONNXRUNTIME_EXTENSIONS_LIBRARY)
+    set(bundled_libs ${ONNXRUNTIME_EXTENSIONS_LIBRARY})
+  endif()
 endif()
 
 set(flutter_onnxruntime_bundled_libraries

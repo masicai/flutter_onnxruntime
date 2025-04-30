@@ -226,6 +226,34 @@ static FlMethodResponse *create_session(FlutterOnnxruntimePlugin *self, FlValue 
       device_id = fl_value_get_int(device_id_val->second);
     }
 
+    auto enable_ort_custom_ops_val = options_map.find("enableOrtCustomOps");
+    if (enable_ort_custom_ops_val != options_map.end() &&
+        fl_value_get_type(enable_ort_custom_ops_val->second) == FL_VALUE_TYPE_BOOL) {
+      if (fl_value_get_bool(enable_ort_custom_ops_val->second)) {
+        // Note: built-in onnxruntime-extensions is only available if onnxruntime is built from source (ref:
+        // https://github.com/microsoft/onnxruntime/blob/main/docs/onnxruntime_extensions.md#build-onnxruntime-with-extensions)
+        // session_options.EnableOrtCustomOps();
+
+        // Get the onnxruntime-extensions library path and register the custom ops
+#ifdef ONNXRUNTIME_EXTENSIONS_AVAILABLE
+        std::string extensions_lib_path = ORT_EXTENSIONS_LIB_PATH;
+        g_message("Registering ONNX Runtime Extensions from: %s", extensions_lib_path.c_str());
+#else
+        // Fallback to searching in the current directory
+        std::string extensions_lib_path = "libortextensions.so";
+#endif
+
+        try {
+          void *handle = nullptr;
+          Ort::ThrowOnError(
+              Ort::GetApi().RegisterCustomOpsLibrary(session_options, extensions_lib_path.c_str(), &handle));
+        } catch (const Ort::Exception &e) {
+          g_warning("Failed to register custom ops library: %s", e.what());
+          // Continue without extensions
+        }
+      }
+    }
+
     // Convert device_id to string for use with provider options
     std::string device_id_str = std::to_string(device_id);
 
