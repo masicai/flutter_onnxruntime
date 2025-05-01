@@ -71,11 +71,10 @@ std::string SessionManager::createSession(const char *model_path, void *options)
     return session_id;
   } catch (const Ort::Exception &e) {
     std::cerr << "ONNX Runtime Error: " << e.what() << std::endl;
-    // Return an empty string to indicate failure
-    return "";
+    throw e;
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;
-    return "";
+    throw e;
   }
 }
 

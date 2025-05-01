@@ -19,16 +19,6 @@ dependencies:
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 ```
 
-### Initializing
-
-The ONNX Runtime is automatically initialized when you create your first session.
-
-```dart
-// Optional: Check platform version
-final platformVersion = await OnnxRuntime().getPlatformVersion();
-print('Running on $platformVersion');
-```
-
 ### Creating a Session
 
 ```dart
