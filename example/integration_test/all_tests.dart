@@ -962,6 +962,10 @@ void main() {
 
     testWidgets('SentencePiece inference test', (WidgetTester tester) async {
       // only support Android for now
+      // Note: For Linux and Windows, this test requires building from source with USE_ONNXRUNTIME_EXTENSIONS=ON
+      // so that we have to check if the environment variable is set with:
+      // final useExtensions = Platform.environment['USE_ONNXRUNTIME_EXTENSIONS'];
+      // if (useExtensions == 'ON') ...
       if (!kIsWeb && Platform.isAndroid) {
         final sessionOptions = OrtSessionOptions(enableOrtCustomOps: true);
         final session = await onnxRuntime.createSessionFromAsset(modelPath, options: sessionOptions);

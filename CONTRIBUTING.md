@@ -75,6 +75,10 @@ You can also manually run tests for a specific platform:
     ```
     flutter test integration_test/all_tests.dart --plain-name "<Test Name>" -d <device_id>
     ```
+  * Running integration tests with `onnxruntime-extensions` enabled for Linux and Windows:
+    ```
+    USE_ONNXRUNTIME_EXTENSIONS=ON flutter test integration_test/all_tests.dart -d <device_id>
+    ```
 
 ### Run integration tests on web
 To run integration tests on web, we need to have a web driver running. We will use Chrome Driver for this example.
@@ -105,3 +109,9 @@ To run integration tests on web, we need to have a web driver running. We will u
 
 ## Debug Tips
 * Log printing does not work when debugging for C++/Linux. We could use early return of `FL_METHOD_RESPONSE()` to locate the error.
+
+
+### Building onnxruntime-extensions
+
+**Requirements:**
+- CMake 3.28 or higher
