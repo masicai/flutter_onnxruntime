@@ -11,157 +11,106 @@ project(${PROJECT_NAME} LANGUAGES CXX)
 # not be changed.
 set(PLUGIN_NAME "flutter_onnxruntime_plugin")
 
-# === ONNX Runtime Configuration ===
-# Option 1: Use pre-installed ONNX Runtime (preferred for system packages)
-option(USE_SYSTEM_ONNXRUNTIME "Use system-installed ONNX Runtime" ON)
+# ======== DOWNLOAD AND EXTRACT ONNXRUNTIME ========
+include(FetchContent)
 
-if(USE_SYSTEM_ONNXRUNTIME)
-  # Try to find ONNX Runtime using pkg-config
-  find_package(PkgConfig)
-  if(PkgConfig_FOUND)
-    pkg_check_modules(ONNXRUNTIME onnxruntime)
-  endif()
+# Set ONNX Runtime version - make sure this is defined
+# Only set if not already defined, to allow the parent project to override it
+if(NOT DEFINED ONNXRUNTIME_VERSION)
+  set(ONNXRUNTIME_VERSION "1.21.0" CACHE STRING "ONNX Runtime version to use")
+endif()
 
-  # If pkg-config didn't find it, try to find it manually
-  if(NOT ONNXRUNTIME_FOUND)
-    # Specify custom paths where ONNX Runtime might be installed
-    set(ONNXRUNTIME_ROOT_DIR "" CACHE PATH "ONNX Runtime root directory")
-    
-    # Look for the library
-    find_library(ONNXRUNTIME_LIBRARY
-      NAMES onnxruntime
-      PATHS ${ONNXRUNTIME_ROOT_DIR}/lib
-      DOC "ONNX Runtime library"
-    )
-    
-    # Look for the include directory
-    find_path(ONNXRUNTIME_INCLUDE_DIR
-      NAMES onnxruntime_cxx_api.h
-      PATHS ${ONNXRUNTIME_ROOT_DIR}/include
-      DOC "ONNX Runtime include directory"
-    )
-    
-    if(ONNXRUNTIME_LIBRARY AND ONNXRUNTIME_INCLUDE_DIR)
-      set(ONNXRUNTIME_FOUND TRUE)
-      set(ONNXRUNTIME_LIBRARIES ${ONNXRUNTIME_LIBRARY})
-      set(ONNXRUNTIME_INCLUDE_DIRS ${ONNXRUNTIME_INCLUDE_DIR})
-      message(STATUS "Found ONNX Runtime: ${ONNXRUNTIME_LIBRARY}")
-    else()
-      set(ONNXRUNTIME_FOUND FALSE)
-    endif()
+# Check if version is not empty
+if("${ONNXRUNTIME_VERSION}" STREQUAL "")
+  set(ONNXRUNTIME_VERSION "1.21.0")
+  message(STATUS "ONNX Runtime version was empty, defaulting to 1.21.0")
+endif()
+
+# Determine platform and architecture for download URL
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(ONNXRUNTIME_PLATFORM "linux")
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+    set(ONNXRUNTIME_ARCH "x64")
+  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    set(ONNXRUNTIME_ARCH "aarch64")
+  else()
+    message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
   endif()
+else()
+  message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
+# Set download URL with correct naming pattern for 1.21.0
+# Make sure all parts of the version are included
+message(STATUS "Using ONNX Runtime version: ${ONNXRUNTIME_VERSION}")
+set(ONNXRUNTIME_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}.tgz")
+
+message(STATUS "Downloading ONNX Runtime from: ${ONNXRUNTIME_URL}")
+
+# Create a directory for the downloaded library
+set(ONNXRUNTIME_DOWNLOAD_DIR "${CMAKE_CURRENT_BINARY_DIR}/onnxruntime")
+
+# Download and extract ONNX Runtime - using file(DOWNLOAD) for more direct control
+if(NOT EXISTS "${ONNXRUNTIME_DOWNLOAD_DIR}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}/include/onnxruntime_cxx_api.h")
+  message(STATUS "Downloading ONNX Runtime...")
+  file(MAKE_DIRECTORY ${ONNXRUNTIME_DOWNLOAD_DIR})
   
-  if(NOT ONNXRUNTIME_FOUND)
-    message(WARNING "System ONNX Runtime not found. Falling back to downloaded version.")
-    set(USE_SYSTEM_ONNXRUNTIME OFF)
+  # Download the tarball
+  set(ONNXRUNTIME_TARBALL "${ONNXRUNTIME_DOWNLOAD_DIR}/onnxruntime.tgz")
+  file(DOWNLOAD ${ONNXRUNTIME_URL} ${ONNXRUNTIME_TARBALL} SHOW_PROGRESS)
+  
+  # Extract the tarball
+  message(STATUS "Extracting ONNX Runtime...")
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E tar xzf ${ONNXRUNTIME_TARBALL}
+    WORKING_DIRECTORY ${ONNXRUNTIME_DOWNLOAD_DIR}
+  )
+  
+  # Clean up the tarball
+  file(REMOVE ${ONNXRUNTIME_TARBALL})
+endif()
+
+# Set paths to the extracted files
+set(ONNXRUNTIME_EXTRACT_DIR "${ONNXRUNTIME_DOWNLOAD_DIR}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}")
+
+# Verify the directory exists
+if(NOT EXISTS ${ONNXRUNTIME_EXTRACT_DIR})
+  message(FATAL_ERROR "ONNX Runtime extraction directory doesn't exist: ${ONNXRUNTIME_EXTRACT_DIR}")
+endif()
+
+# Set include and library directories
+set(ONNXRUNTIME_INCLUDE_DIRS "${ONNXRUNTIME_EXTRACT_DIR}/include")
+
+# Log directory contents to help with debugging
+message(STATUS "ONNX Runtime extract directory: ${ONNXRUNTIME_EXTRACT_DIR}")
+file(GLOB_RECURSE ONNXRUNTIME_FILES "${ONNXRUNTIME_EXTRACT_DIR}/*")
+foreach(FILE ${ONNXRUNTIME_FILES})
+  message(STATUS "Found file: ${FILE}")
+endforeach()
+
+# Find the library files
+if(EXISTS "${ONNXRUNTIME_EXTRACT_DIR}/lib/libonnxruntime.so")
+  set(ONNXRUNTIME_LIBRARY "${ONNXRUNTIME_EXTRACT_DIR}/lib/libonnxruntime.so")
+else()
+  # Try to find the library in case the structure changed
+  file(GLOB_RECURSE ONNXRUNTIME_LIB_CANDIDATES
+    "${ONNXRUNTIME_EXTRACT_DIR}/*onnxruntime*${CMAKE_SHARED_LIBRARY_SUFFIX}"
+  )
+  
+  if(ONNXRUNTIME_LIB_CANDIDATES)
+    list(GET ONNXRUNTIME_LIB_CANDIDATES 0 ONNXRUNTIME_LIBRARY)
+    message(STATUS "Found ONNX Runtime library: ${ONNXRUNTIME_LIBRARY}")
+  else()
+    message(FATAL_ERROR "Could not find ONNX Runtime library in extracted files")
   endif()
 endif()
 
-# Option 2: Download ONNX Runtime if not using system installed version
-if(NOT USE_SYSTEM_ONNXRUNTIME)
-  include(FetchContent)
-  
-  # Set ONNX Runtime version - make sure this is defined
-  # Only set if not already defined, to allow the parent project to override it
-  if(NOT DEFINED ONNXRUNTIME_VERSION)
-    set(ONNXRUNTIME_VERSION "1.21.0" CACHE STRING "ONNX Runtime version to use")
-  endif()
-  
-  # Check if version is not empty
-  if("${ONNXRUNTIME_VERSION}" STREQUAL "")
-    set(ONNXRUNTIME_VERSION "1.21.0")
-    message(STATUS "ONNX Runtime version was empty, defaulting to 1.21.0")
-  endif()
-  
-  # Debug output
-  message(STATUS "ONNX Runtime version set to: ${ONNXRUNTIME_VERSION}")
-  
-  # Determine platform and architecture for download URL
-  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(ONNXRUNTIME_PLATFORM "linux")
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
-      set(ONNXRUNTIME_ARCH "x64")
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-      set(ONNXRUNTIME_ARCH "aarch64")
-    else()
-      message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
-    endif()
-  else()
-    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
-  endif()
-  
-  # Set download URL with correct naming pattern for 1.21.0
-  # Make sure all parts of the version are included
-  message(STATUS "Using ONNX Runtime version: ${ONNXRUNTIME_VERSION}")
-  set(ONNXRUNTIME_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}.tgz")
-  
-  message(STATUS "Downloading ONNX Runtime from: ${ONNXRUNTIME_URL}")
-  
-  # Create a directory for the downloaded library
-  set(ONNXRUNTIME_DOWNLOAD_DIR "${CMAKE_CURRENT_BINARY_DIR}/onnxruntime")
-  
-  # Download and extract ONNX Runtime - using file(DOWNLOAD) for more direct control
-  if(NOT EXISTS "${ONNXRUNTIME_DOWNLOAD_DIR}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}/include/onnxruntime_cxx_api.h")
-    message(STATUS "Downloading ONNX Runtime...")
-    file(MAKE_DIRECTORY ${ONNXRUNTIME_DOWNLOAD_DIR})
-    
-    # Download the tarball
-    set(ONNXRUNTIME_TARBALL "${ONNXRUNTIME_DOWNLOAD_DIR}/onnxruntime.tgz")
-    file(DOWNLOAD ${ONNXRUNTIME_URL} ${ONNXRUNTIME_TARBALL} SHOW_PROGRESS)
-    
-    # Extract the tarball
-    message(STATUS "Extracting ONNX Runtime...")
-    execute_process(
-      COMMAND ${CMAKE_COMMAND} -E tar xzf ${ONNXRUNTIME_TARBALL}
-      WORKING_DIRECTORY ${ONNXRUNTIME_DOWNLOAD_DIR}
-    )
-    
-    # Clean up the tarball
-    file(REMOVE ${ONNXRUNTIME_TARBALL})
-  endif()
-  
-  # Set paths to the extracted files
-  set(ONNXRUNTIME_EXTRACT_DIR "${ONNXRUNTIME_DOWNLOAD_DIR}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}")
-  
-  # Verify the directory exists
-  if(NOT EXISTS ${ONNXRUNTIME_EXTRACT_DIR})
-    message(FATAL_ERROR "ONNX Runtime extraction directory doesn't exist: ${ONNXRUNTIME_EXTRACT_DIR}")
-  endif()
-  
-  # Set include and library directories
-  set(ONNXRUNTIME_INCLUDE_DIRS "${ONNXRUNTIME_EXTRACT_DIR}/include")
-  
-  # Log directory contents to help with debugging
-  message(STATUS "ONNX Runtime extract directory: ${ONNXRUNTIME_EXTRACT_DIR}")
-  file(GLOB_RECURSE ONNXRUNTIME_FILES "${ONNXRUNTIME_EXTRACT_DIR}/*")
-  foreach(FILE ${ONNXRUNTIME_FILES})
-    message(STATUS "Found file: ${FILE}")
-  endforeach()
-  
-  # Find the library files
-  if(EXISTS "${ONNXRUNTIME_EXTRACT_DIR}/lib/libonnxruntime.so")
-    set(ONNXRUNTIME_LIBRARY "${ONNXRUNTIME_EXTRACT_DIR}/lib/libonnxruntime.so")
-  else()
-    # Try to find the library in case the structure changed
-    file(GLOB_RECURSE ONNXRUNTIME_LIB_CANDIDATES
-      "${ONNXRUNTIME_EXTRACT_DIR}/*onnxruntime*${CMAKE_SHARED_LIBRARY_SUFFIX}"
-    )
-    
-    if(ONNXRUNTIME_LIB_CANDIDATES)
-      list(GET ONNXRUNTIME_LIB_CANDIDATES 0 ONNXRUNTIME_LIBRARY)
-      message(STATUS "Found ONNX Runtime library: ${ONNXRUNTIME_LIBRARY}")
-    else()
-      message(FATAL_ERROR "Could not find ONNX Runtime library in extracted files")
-    endif()
-  endif()
-  
-  set(ONNXRUNTIME_LIBRARIES ${ONNXRUNTIME_LIBRARY})
-  
-  # Add to bundled libraries
-  set(flutter_onnxruntime_bundled_libraries ${ONNXRUNTIME_LIBRARY})
-endif()
+set(ONNXRUNTIME_LIBRARIES ${ONNXRUNTIME_LIBRARY})
 
-# === ONNX Runtime Extensions Configuration ===
+# Add to bundled libraries
+set(flutter_onnxruntime_bundled_libraries ${ONNXRUNTIME_LIBRARY})
+
+# === DONLOAD AND BUILD ONNXRUNTIME EXTENSIONS ===
 option(USE_ONNXRUNTIME_EXTENSIONS "Use ONNX Runtime Extensions" OFF)
 
 # Check for environment variable
