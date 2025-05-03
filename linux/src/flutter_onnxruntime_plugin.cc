@@ -230,18 +230,17 @@ static FlMethodResponse *create_session(FlutterOnnxruntimePlugin *self, FlValue 
     if (enable_ort_custom_ops_val != options_map.end() &&
         fl_value_get_type(enable_ort_custom_ops_val->second) == FL_VALUE_TYPE_BOOL) {
       if (fl_value_get_bool(enable_ort_custom_ops_val->second)) {
+#ifdef BUILT_IN_ONNXRUNTIME_EXTENSIONS_AVAILABLE
         // Note: built-in onnxruntime-extensions is only available if onnxruntime is built from source (ref:
         // https://github.com/microsoft/onnxruntime/blob/main/docs/onnxruntime_extensions.md#build-onnxruntime-with-extensions)
-        // session_options.EnableOrtCustomOps();
+        session_options.EnableOrtCustomOps();
+        g_message("Registering built-in ONNX Runtime Extensions");
+#endif
 
         // Get the onnxruntime-extensions library path and register the custom ops
 #ifdef ONNXRUNTIME_EXTENSIONS_AVAILABLE
         std::string extensions_lib_path = ORT_EXTENSIONS_LIB_PATH;
         g_message("Registering ONNX Runtime Extensions from: %s", extensions_lib_path.c_str());
-#else
-        // Fallback to searching in the current directory
-        std::string extensions_lib_path = "libortextensions.so";
-#endif
 
         try {
           void *handle = nullptr;
@@ -251,6 +250,7 @@ static FlMethodResponse *create_session(FlutterOnnxruntimePlugin *self, FlValue 
           g_warning("Failed to register custom ops library: %s", e.what());
           // Continue without extensions
         }
+#endif
       }
     }
 
