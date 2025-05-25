@@ -52,7 +52,7 @@ if(USE_SYSTEM_ONNXRUNTIME)
   endif()
   
   if(NOT ONNXRUNTIME_FOUND)
-    message(WARNING "System ONNX Runtime not found. Falling back to downloaded version.")
+    message(STATUS "System ONNX Runtime not found. Falling back to downloaded version.")
     set(USE_SYSTEM_ONNXRUNTIME OFF)
   endif()
 endif()
