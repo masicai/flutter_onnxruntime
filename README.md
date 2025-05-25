@@ -117,6 +117,53 @@ Clone [this repository](https://github.com/masicai/flutter-onnxruntime-examples)
 
 <sup>1</sup>: Execution Providers (EP) are hardware accelerated inference interface for AI inference (e.g., CPU, GPU, NPU, TPU, etc.) 
 
+## 📋 Required development setup
+
+### Android
+
+Android build requires `proguard-rules.pro` inside your Android project at `android/app/` with the following content:
+  ```
+  -keep class ai.onnxruntime.** { *; }
+  ```
+or running the below command from your terminal:
+
+  ```bash
+  echo "-keep class ai.onnxruntime.** { *; }" > android/app/proguard-rules.pro
+  ```
+
+Refer to [troubleshooting.md](doc/troubleshooting.md) for more information.
+
+### iOS
+
+ONNX Runtime requires minimum version `iOS 16` and static linkage.
+
+In `ios/Podfile`, change the following lines:
+```bash
+platform :ios, '16.0'
+
+# existing code ...
+
+use_frameworks! :linkage => :static
+
+# existing code ...
+```
+
+### macOS
+
+macOS build requires minimum version `macOS 14`.
+
+* In `macos/Podfile`, change the following lines:
+  ```bash
+  platform :osx, '14.0'
+  ```
+
+* Change the "Minimum Deployments" to 14.0 in XCode. In your terminal:
+  ```bash
+  open Runner.xcworkspace
+  ```
+  In `Runner` -> `General`, change `Minimum Deployments` to `14.0`.
+
+
 ## 🛠️ Troubleshooting
 
 For troubleshooting, see the [troubleshooting.md](doc/troubleshooting.md) file.

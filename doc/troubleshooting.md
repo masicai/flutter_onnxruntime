@@ -16,6 +16,10 @@ Common issues and their solutions.
 
 ## iOS
 * Target minimum version: iOS 16
+    * Open `ios/Podfile` and change the target minimum version to 16.0
+        ```
+        platform :ios, '16.0'
+        ```
 * "The 'Pods-Runner' target has transitive dependencies that include statically linked binaries: (onnxruntime-objc and onnxruntime-c)". In `Podfile` change:
     ```
     target 'Runner' do
@@ -26,16 +30,22 @@ Common issues and their solutions.
 
 ## macOS
 * Target minimum version: MacOS 14
+    * Open `macos/Podfile` and change the target minimum version to 14.0
+        ```
+        platform :osx, '14.0'
+        ```
+    * "error: compiling for macOS 10.14, but module 'flutter_onnxruntime' has a minimum deployment target of macOS 14.0".
+        * In terminal, cd to the `macos` directory and run the XCode to open the project:
+            ```
+            open Runner.xcworkspace
+            ```
+        * In `Runner` -> `General`, change `Minimum Deployments` to `14.0`.
 * "The 'Pods-Runner' target has transitive dependencies that include statically linked binaries: (onnxruntime-objc and onnxruntime-c)". In `Podfile` change:
     ```
     target 'Runner' do
     use_frameworks! :linkage => :static
     ```
-* "error: compiling for macOS 10.14, but module 'flutter_onnxruntime' has a minimum deployment target of macOS 14.0". In terminal, cd to the `macos` directory and run the XCode to open the project:
-    ```
-    open Runner.xcworkspace
-    ```
-    Then change the "Minimum Deployments" to 14.0.
+
 
 ## Linux
 * When running with ONNX Runtime 1.21.0, you may see reference counting warnings related to FlValue objects. These don't prevent the app from running but may be addressed in future updates.
