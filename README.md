@@ -94,7 +94,7 @@ Clone [this repository](https://github.com/masicai/flutter-onnxruntime-examples)
 | Feature | Android | iOS | Linux | macOS | Windows | Web |
 |---------|:-------:|:---:|:-----:|:-----:|:-------:|:---: |
 | CPU Inference | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| GPU Inference | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| EP<sup>1</sup> Configuration | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Input/Output names | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Data Type Conversion | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Inference on Emulator | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -114,6 +114,8 @@ Clone [this repository](https://github.com/masicai/flutter-onnxruntime-examples)
 `*`: Retrieving model metadata and input/output info is not available for Swift and Javascript API.
 
 `**`: Swift does not support FP16 type.
+
+<sup>1</sup>: Execution Providers (EP) are hardware accelerated inference interface for AI inference (e.g., CPU, GPU, NPU, TPU, etc.) 
 
 ## 🛠️ Troubleshooting
 
