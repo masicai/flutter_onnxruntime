@@ -1,3 +1,7 @@
+## 1.4.2
+* Remove unnecessary warnings in CMake for the Linux build
+* Improve README and troubleshooting documentation
+
 ## 1.4.1
 * Support string tensors in all platforms
 * Reinforce structure and behavior consistency between Linux and Windows implementations
