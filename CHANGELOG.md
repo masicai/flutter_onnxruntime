@@ -1,3 +1,8 @@
+## 1.4.3
+* Fix an issue with input name-value mismatch in Windows (#28 #29)
+* Add more integration tests for input name and order consistency
+* Add integration tests for int64 input tensor
+
 ## 1.4.2
 * Remove unnecessary warnings in CMake for the Linux build
 * Improve README and troubleshooting documentation
