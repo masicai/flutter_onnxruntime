@@ -694,13 +694,11 @@ void FlutterOnnxruntimePlugin::HandleRunInference(
       }
     }
 
-    // Get expected input and output names from the session
-    std::vector<std::string> expected_input_names = impl_->sessionManager_->getInputNames(session_id);
     std::vector<std::string> output_names = impl_->sessionManager_->getOutputNames(session_id);
 
     // Prepare input tensors and input names
     std::vector<Ort::Value> input_tensors;
-    std::vector<std::string> user_input_names;
+    std::vector<std::string> input_names;
 
     // Iterate through each input
     for (const auto &input_pair : inputs_map) {
@@ -729,7 +727,7 @@ void FlutterOnnxruntimePlugin::HandleRunInference(
           Ort::Value cloned_tensor = impl_->tensorManager_->cloneTensor(tensor_id);
           if (cloned_tensor) {
             input_tensors.push_back(std::move(cloned_tensor));
-            user_input_names.push_back(input_name);
+            input_names.push_back(input_name);
           }
         } catch (const std::exception &e) {
           // Log the error but continue with the next tensor
@@ -741,7 +739,7 @@ void FlutterOnnxruntimePlugin::HandleRunInference(
     // Run inference using SessionManager with input names
     std::vector<Ort::Value> output_tensors;
     if (!input_tensors.empty()) {
-      output_tensors = impl_->sessionManager_->runInference(session_id, input_tensors, user_input_names, &run_options);
+      output_tensors = impl_->sessionManager_->runInference(session_id, input_tensors, input_names, &run_options);
     }
 
     // Process outputs

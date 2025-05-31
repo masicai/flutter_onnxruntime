@@ -380,12 +380,11 @@ static FlMethodResponse *run_inference(FlutterOnnxruntimePlugin *self, FlValue *
 
   try {
     // Get expected input names from the session
-    std::vector<std::string> expected_input_names = self->session_manager->getInputNames(session_id);
     std::vector<std::string> output_names = self->session_manager->getOutputNames(session_id);
 
     // Prepare input tensors and input names
     std::vector<Ort::Value> input_tensors;
-    std::vector<std::string> user_input_names;
+    std::vector<std::string> input_names;
 
     // Iterate through each input
     size_t num_inputs = fl_value_get_length(inputs_value);
@@ -415,7 +414,7 @@ static FlMethodResponse *run_inference(FlutterOnnxruntimePlugin *self, FlValue *
           // Use the tensor manager to clone the tensor
           Ort::Value new_tensor = self->tensor_manager->cloneTensor(tensor_id);
           input_tensors.push_back(std::move(new_tensor));
-          user_input_names.push_back(input_name);
+          input_names.push_back(input_name);
         } catch (const std::exception &e) {
           g_warning("Failed to clone tensor %s: %s", tensor_id.c_str(), e.what());
           // Continue with the next tensor
@@ -452,7 +451,7 @@ static FlMethodResponse *run_inference(FlutterOnnxruntimePlugin *self, FlValue *
     // Run inference using SessionManager with user-provided input names
     std::vector<Ort::Value> output_tensors;
     if (!input_tensors.empty()) {
-      output_tensors = self->session_manager->runInference(session_id, input_tensors, user_input_names, &run_options);
+      output_tensors = self->session_manager->runInference(session_id, input_tensors, input_names, &run_options);
     }
 
     // Process outputs
