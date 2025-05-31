@@ -795,6 +795,56 @@ void main() {
         await tensorA.dispose();
         await tensorB.dispose();
       });
+
+      testWidgets('Invalid input name test', (WidgetTester tester) async {
+        // Create tensors with correct shapes but using wrong input name
+        final tensorA = await OrtValue.fromList([1.0, 1.0, 1.0, 1.0, 1.0, 1.0], [1, 2, 3]);
+        final tensorB = await OrtValue.fromList([2.0, 2.0, 2.0, 2.0, 2.0, 2.0], [1, 3, 2]);
+        // await session.run({'X': tensorA, 'B': tensorB});
+
+        // Use wrong input name (X instead of A)
+        // Expect to throw an exception with code "INFERENCE_ERROR"
+        expect(
+          () async => await session.run({'X': tensorA, 'B': tensorB}),
+          throwsA(isA<PlatformException>().having((e) => e.code, 'code', "INFERENCE_ERROR")),
+        );
+
+        // Clean up
+        await tensorA.dispose();
+        await tensorB.dispose();
+      });
+
+      testWidgets('Random input order test', (WidgetTester tester) async {
+        // Create tensors with correct shapes
+        final tensorA = await OrtValue.fromList([1.0, 1.0, 1.0, 1.0, 1.0, 1.0], [1, 2, 3]);
+        final tensorB = await OrtValue.fromList([2.0, 2.0, 2.0, 2.0, 2.0, 2.0], [1, 3, 2]);
+
+        // Run inference with inputs in normal order
+        final outputsNormal = await session.run({'A': tensorA, 'B': tensorB});
+        final outputNormal = outputsNormal['C'];
+
+        // Run inference with inputs in reverse order
+        final outputsReversed = await session.run({'B': tensorB, 'A': tensorA});
+        final outputReversed = outputsReversed['C'];
+
+        // Verify both outputs are the same
+        expect(outputReversed!.dataType, outputNormal!.dataType);
+        expect(outputReversed.shape, outputNormal.shape);
+
+        final outputDataNormal = await outputNormal.asFlattenedList();
+        final outputDataReversed = await outputReversed.asFlattenedList();
+
+        expect(outputDataNormal.length, outputDataReversed.length);
+        for (int i = 0; i < outputDataNormal.length; i++) {
+          expect(outputDataReversed[i], outputDataNormal[i]);
+        }
+
+        // Clean up
+        await tensorA.dispose();
+        await tensorB.dispose();
+        await outputNormal.dispose();
+        await outputReversed.dispose();
+      });
     });
 
     group('INT32 model test', () {

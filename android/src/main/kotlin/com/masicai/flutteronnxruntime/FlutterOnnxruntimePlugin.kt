@@ -478,7 +478,7 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                         throw e
                     }
                 } catch (e: OrtException) {
-                    result.error("ORT_ERROR", e.message, e.stackTraceToString())
+                    result.error("INFERENCE_ERROR", e.message, e.stackTraceToString())
                 } catch (e: Exception) {
                     result.error("PLUGIN_ERROR", e.message, e.stackTraceToString())
                 }

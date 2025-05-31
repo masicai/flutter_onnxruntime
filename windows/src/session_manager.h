@@ -74,8 +74,9 @@ public:
   // Get output tensor info for a session
   std::vector<TensorInfo> getOutputInfo(const std::string &session_id);
 
-  // Run inference with a session
+  // Run inference with a session using provided input names
   std::vector<Ort::Value> runInference(const std::string &session_id, const std::vector<Ort::Value> &input_tensors,
+                                       const std::vector<std::string> &input_names,
                                        Ort::RunOptions *run_options = nullptr);
 
   // Helper method to get element type string

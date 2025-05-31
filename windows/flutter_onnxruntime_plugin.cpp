@@ -694,12 +694,13 @@ void FlutterOnnxruntimePlugin::HandleRunInference(
       }
     }
 
-    // Get input and output names
-    std::vector<std::string> input_names = impl_->sessionManager_->getInputNames(session_id);
+    // Get expected input and output names from the session
+    std::vector<std::string> expected_input_names = impl_->sessionManager_->getInputNames(session_id);
     std::vector<std::string> output_names = impl_->sessionManager_->getOutputNames(session_id);
 
-    // Prepare input tensors
+    // Prepare input tensors and input names
     std::vector<Ort::Value> input_tensors;
+    std::vector<std::string> user_input_names;
 
     // Iterate through each input
     for (const auto &input_pair : inputs_map) {
@@ -707,6 +708,9 @@ void FlutterOnnxruntimePlugin::HandleRunInference(
           !std::holds_alternative<flutter::EncodableMap>(input_pair.second)) {
         continue;
       }
+
+      // Extract the input name from the map key
+      std::string input_name = std::get<std::string>(input_pair.first);
 
       const auto &input_value_map = std::get<flutter::EncodableMap>(input_pair.second);
       auto tensor_id_it = input_value_map.find(flutter::EncodableValue("valueId"));
@@ -725,6 +729,7 @@ void FlutterOnnxruntimePlugin::HandleRunInference(
           Ort::Value cloned_tensor = impl_->tensorManager_->cloneTensor(tensor_id);
           if (cloned_tensor) {
             input_tensors.push_back(std::move(cloned_tensor));
+            user_input_names.push_back(input_name);
           }
         } catch (const std::exception &e) {
           // Log the error but continue with the next tensor
@@ -733,10 +738,10 @@ void FlutterOnnxruntimePlugin::HandleRunInference(
       }
     }
 
-    // Run inference using SessionManager
+    // Run inference using SessionManager with input names
     std::vector<Ort::Value> output_tensors;
     if (!input_tensors.empty()) {
-      output_tensors = impl_->sessionManager_->runInference(session_id, input_tensors, &run_options);
+      output_tensors = impl_->sessionManager_->runInference(session_id, input_tensors, user_input_names, &run_options);
     }
 
     // Process outputs
@@ -774,7 +779,7 @@ void FlutterOnnxruntimePlugin::HandleRunInference(
 
     result->Success(flutter::EncodableValue(outputs_map));
   } catch (const Ort::Exception &e) {
-    result->Error("INFERENCE_FAILED", e.what(), nullptr);
+    result->Error("INFERENCE_ERROR", e.what(), nullptr);
   } catch (const std::exception &e) {
     result->Error("PLUGIN_ERROR", e.what(), nullptr);
   } catch (...) {

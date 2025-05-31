@@ -333,7 +333,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       if (e is PlatformException) {
         rethrow;
       }
-      throw PlatformException(code: "PLUGIN_ERROR", message: "Failed to run inference: $e", details: null);
+      throw PlatformException(code: "INFERENCE_ERROR", message: "Failed to run inference: $e", details: null);
     }
   }
 
