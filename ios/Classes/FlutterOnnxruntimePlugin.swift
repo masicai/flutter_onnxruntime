@@ -269,7 +269,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
     } catch let error as FlutterError {
       result(error)
     } catch {
-      result(FlutterError(code: "RUN_INFERENCE_ERROR", message: error.localizedDescription, details: nil))
+      result(FlutterError(code: "INFERENCE_ERROR", message: error.localizedDescription, details: nil))
     }
   }
 
