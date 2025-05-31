@@ -883,6 +883,47 @@ void main() {
       });
     });
 
+    group('INT64 model test', () {
+      late OnnxRuntime onnxRuntime;
+      late OrtSession session;
+      late Map<String, OrtValue> inputs;
+
+      setUpAll(() async {
+        onnxRuntime = OnnxRuntime();
+        session = await onnxRuntime.createSessionFromAsset('assets/models/transpose_and_avg_model_int64.onnx');
+      });
+
+      tearDownAll(() async {
+        await session.close();
+      });
+
+      testWidgets('INT64 model inference test', (WidgetTester tester) async {
+        // skip the test for web platform as BigInt64Array required by ONNX Runtime Web for int64 tensors
+        // is not supported in all browsers
+        if (kIsWeb) {
+          return;
+        }
+        inputs = {
+          'A': await OrtValue.fromList(Int64List.fromList([1, 1, 1, 1, 1, 1]), [1, 2, 3]),
+          'B': await OrtValue.fromList(Int64List.fromList([2, 2, 2, 2, 2, 2]), [1, 3, 2]),
+        };
+        final outputs = await session.run(inputs);
+        final output = outputs['C'];
+        expect(output!.dataType, OrtDataType.int64);
+        expect(output.shape, [1, 2, 3]);
+
+        final outputData = await output.asFlattenedList();
+        expect(outputData.length, 6);
+        expect(outputData.every((e) => e == 1), true); // 1 + 2 = 3, 3 * 0.5 = 1.5 -> 1
+
+        // clean up
+        for (var input in inputs.values) {
+          input.dispose();
+        }
+        await output.dispose();
+      });
+    });
+
     group('FP16 model test', () {
       late OnnxRuntime onnxRuntime;
       late OrtSession session;
