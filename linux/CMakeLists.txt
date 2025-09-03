@@ -3,6 +3,11 @@
 # the plugin to fail to compile for some customers of the plugin.
 cmake_minimum_required(VERSION 3.10)
 
+# Set policy for FetchContent timestamp handling
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
 # Project-level configuration.
 set(PROJECT_NAME "flutter_onnxruntime")
 project(${PROJECT_NAME} LANGUAGES CXX)
@@ -286,7 +291,8 @@ enable_testing()
 include(FetchContent)
 FetchContent_Declare(
   googletest
-  URL https://github.com/google/googletest/archive/release-1.11.0.zip
+  URL https://github.com/google/googletest/archive/v1.17.0.zip
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 # Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
