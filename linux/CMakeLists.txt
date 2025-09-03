@@ -69,13 +69,13 @@ if(NOT USE_SYSTEM_ONNXRUNTIME)
   # Set ONNX Runtime version - make sure this is defined
   # Only set if not already defined, to allow the parent project to override it
   if(NOT DEFINED ONNXRUNTIME_VERSION)
-    set(ONNXRUNTIME_VERSION "1.21.0" CACHE STRING "ONNX Runtime version to use")
+    set(ONNXRUNTIME_VERSION "1.22.0" CACHE STRING "ONNX Runtime version to use")
   endif()
   
   # Check if version is not empty
   if("${ONNXRUNTIME_VERSION}" STREQUAL "")
-    set(ONNXRUNTIME_VERSION "1.21.0")
-    message(STATUS "ONNX Runtime version was empty, defaulting to 1.21.0")
+    set(ONNXRUNTIME_VERSION "1.22.0")
+    message(STATUS "ONNX Runtime version was empty, defaulting to 1.22.0")
   endif()
   
   # Debug output
@@ -95,7 +95,7 @@ if(NOT USE_SYSTEM_ONNXRUNTIME)
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
   endif()
   
-  # Set download URL with correct naming pattern for 1.21.0
+  # Set download URL with correct naming pattern for 1.22.0
   # Make sure all parts of the version are included
   message(STATUS "Using ONNX Runtime version: ${ONNXRUNTIME_VERSION}")
   set(ONNXRUNTIME_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}.tgz")
@@ -191,6 +191,9 @@ apply_standard_settings(${PLUGIN_NAME})
 set_target_properties(${PLUGIN_NAME} PROPERTIES
   CXX_VISIBILITY_PRESET hidden)
 target_compile_definitions(${PLUGIN_NAME} PRIVATE FLUTTER_PLUGIN_IMPL)
+
+# Enable C++17 features (required for ONNX Runtime 1.22.0+)
+target_compile_features(${PLUGIN_NAME} PRIVATE cxx_std_17)
 
 # Source include directories and library dependencies. Add any plugin-specific
 # dependencies here.
