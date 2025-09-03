@@ -18,6 +18,7 @@ on:
       - 'linux/**/*.h'
       - 'linux/**/*.cpp'
       - 'linux/**/*.hpp'
+      - 'linux/CMakeLists.txt'
 
 jobs:
   linux_integration_test:
