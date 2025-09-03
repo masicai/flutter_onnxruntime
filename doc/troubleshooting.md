@@ -13,6 +13,12 @@ Common issues and their solutions.
     ```bash
     echo "-keep class ai.onnxruntime.** { *; }" > android/app/proguard-rules.pro
     ```
+* `...Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.1.0, expected version is 1.8.0`: update your Kotlin version to 2.1.0 in `android/settings.gradle.kts`:
+    ```kotlin
+    plugins {
+        id("org.jetbrains.kotlin.android") version "2.1.0" apply false
+    }
+    ```
 
 ## iOS
 * Target minimum version: iOS 16
