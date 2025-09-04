@@ -25,6 +25,23 @@ external JSObject get globalThis;
 @JS('Object')
 external JSFunction get objectConstructor;
 
+// Array constructor for creating JavaScript arrays
+@JS('Array')
+external JSFunction get arrayConstructor;
+
+// TypedArray constructors
+@JS('Float32Array')
+external JSFunction get float32ArrayConstructor;
+
+@JS('Int32Array')
+external JSFunction get int32ArrayConstructor;
+
+@JS('BigInt64Array')
+external JSFunction get bigInt64ArrayConstructor;
+
+@JS('Uint8Array')
+external JSFunction get uint8ArrayConstructor;
+
 @JS()
 @staticInterop
 class WindowJS {}
@@ -233,8 +250,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
   }
 
   JSObject jsArrayFrom(List<dynamic> list) {
-    final array = js_util.getProperty(globalThis, 'Array');
-    return js_util.callMethod(array, 'from', [list]);
+    return callMethod(arrayConstructor, 'from', [list]);
   }
 
   Future<T> promiseToFuture<T>(JSObject promise) {
@@ -757,11 +773,22 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
     // Create a JavaScript Array from the Dart List
     final jsArray = jsArrayFrom(dataList);
 
-    // Get the TypedArray constructor from the global scope
-    final typedArrayConstructor = js_util.getProperty(globalThis, arrayType);
+    // Get the appropriate TypedArray constructor
+    final constructor = switch (arrayType) {
+      'Float32Array' => float32ArrayConstructor,
+      'Int32Array' => int32ArrayConstructor,
+      'BigInt64Array' => bigInt64ArrayConstructor,
+      'Uint8Array' => uint8ArrayConstructor,
+      _ =>
+        throw PlatformException(
+          code: "UNSUPPORTED_ARRAY_TYPE",
+          message: "Unsupported array type: $arrayType",
+          details: null,
+        ),
+    };
 
     // Create the TypedArray from the Array
-    return js_util.callMethod(typedArrayConstructor, 'from', [jsArray]);
+    return callMethod(constructor, 'from', [jsArray]);
   }
 
   // Map Dart source type to ONNX Runtime type strings
