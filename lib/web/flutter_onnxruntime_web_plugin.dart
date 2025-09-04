@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
-import 'package:js/js_util.dart' as js_util;
 import 'dart:math' as math;
 
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
@@ -45,6 +44,10 @@ external JSFunction get uint8ArrayConstructor;
 // ONNX Runtime Tensor constructor
 @JS('ort.Tensor')
 external JSFunction get tensorConstructor;
+
+// JavaScript Object global for Object.keys() operations
+@JS('Object')
+external JSObject get objectGlobal;
 
 @JS()
 @staticInterop
@@ -485,12 +488,12 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
           // Convert JavaScript object to Dart map
           // Use Object.keys() from JavaScript to get the keys of the object
-          final keysObj = js_util.callMethod(globalThis, 'Object.keys', [customMap]);
-          final length = js_util.getProperty(keysObj, 'length') as int;
+          final keysObj = callMethod(objectGlobal, 'keys', [customMap]);
+          final length = getProperty(keysObj, 'length') as int;
 
           for (var i = 0; i < length; i++) {
-            final key = js_util.callMethod(keysObj, 'at', [i]).toString();
-            final value = js_util.getProperty(customMap, key).toString();
+            final key = callMethod(keysObj, 'at', [i]).toString();
+            final value = getProperty(customMap, key).toString();
             customMetadataMap[key] = value;
           }
 
@@ -670,7 +673,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
   // Helper method to check if a JS object has a property
   bool hasProperty(JSObject obj, String name) {
     try {
-      return js_util.hasProperty(obj, name);
+      return obj.has(name);
     } catch (e) {
       return false;
     }
@@ -859,7 +862,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           for (var i = 0; i < dataLength; i++) {
             final value = callMethod(jsData, 'at', [i]);
             // Convert BigInt or similar to standard number if possible
-            data.add(js_util.dartify(value));
+            // For dart:js_interop, try direct conversion to num or int
+            data.add((value as num).toInt());
           }
           break;
 
@@ -872,12 +876,10 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         case 'bool':
           for (var i = 0; i < dataLength; i++) {
             // For boolean tensors, convert the numeric values back to proper Dart booleans
-            final value = callMethod(jsData, 'at', [i]);
-            // Convert JS value to Dart numeric value before comparison
-            final numValue = js_util.dartify(value);
+            final value = callMethod(jsData, 'at', [i]) as num;
             // Return the actual numeric value (1 or 0), not a boolean,
             // to match native implementations which return 1/0
-            data.add(numValue != 0 ? 1 : 0);
+            data.add(value != 0 ? 1 : 0);
           }
           break;
 
@@ -951,9 +953,6 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         shape.add(callMethod(jsShape, 'at', [i]) as int);
       }
 
-      // Get the Tensor constructor from onnxruntime-web
-      final tensorClass = getProperty(_ort, 'Tensor');
-
       // Get the data from the tensor
       final jsData = getProperty(tensor, 'data');
       final dataLength = getProperty(jsData, 'length') as int;
@@ -972,7 +971,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           }
 
           final jsIntArray = _convertToTypedArray(intArray, 'Int32Array');
-          newTensor = js_util.callConstructor(tensorClass, ['int32', jsIntArray, jsArrayFrom(shape)]);
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['int32'.toJS, jsIntArray, jsArrayFrom(shape)]);
           break;
 
         // Float32 to Int64 (BigInt64Array)
@@ -995,7 +994,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           }
 
           final jsFloatArray = _convertToTypedArray(floatArray, 'Float32Array');
-          newTensor = js_util.callConstructor(tensorClass, ['float32', jsFloatArray, jsArrayFrom(shape)]);
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['float32'.toJS, jsFloatArray, jsArrayFrom(shape)]);
           break;
 
         // Int64 to Float32
@@ -1003,21 +1002,20 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           final floatArray = [];
           for (var i = 0; i < dataLength; i++) {
             final jsValue = callMethod(jsData, 'at', [i]);
-            final value = js_util.dartify(jsValue);
-            // Convert value to double, handle null or non-numeric cases
+            // Convert BigInt to double for dart:js_interop
             double doubleValue = 0.0;
-            if (value != null) {
-              if (value is num) {
-                doubleValue = value.toDouble();
-              } else if (value is String) {
-                doubleValue = double.tryParse(value) ?? 0.0;
-              }
+            try {
+              final numValue = jsValue as num;
+              doubleValue = numValue.toDouble();
+            } catch (e) {
+              // Handle conversion errors
+              doubleValue = 0.0;
             }
             floatArray.add(doubleValue);
           }
 
           final jsFloatArray = _convertToTypedArray(floatArray, 'Float32Array');
-          newTensor = js_util.callConstructor(tensorClass, ['float32', jsFloatArray, jsArrayFrom(shape)]);
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['float32'.toJS, jsFloatArray, jsArrayFrom(shape)]);
           break;
 
         // Int32 to Int64
@@ -1036,21 +1034,20 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           final intArray = [];
           for (var i = 0; i < dataLength; i++) {
             final jsValue = callMethod(jsData, 'at', [i]);
-            final value = js_util.dartify(jsValue);
-            // Convert value to int, handle null or non-numeric cases
+            // Convert BigInt to int for dart:js_interop
             int intValue = 0;
-            if (value != null) {
-              if (value is num) {
-                intValue = value.toInt();
-              } else if (value is String) {
-                intValue = int.tryParse(value) ?? 0;
-              }
+            try {
+              final numValue = jsValue as num;
+              intValue = numValue.toInt();
+            } catch (e) {
+              // Handle conversion errors
+              intValue = 0;
             }
             intArray.add(intValue);
           }
 
           final jsIntArray = _convertToTypedArray(intArray, 'Int32Array');
-          newTensor = js_util.callConstructor(tensorClass, ['int32', jsIntArray, jsArrayFrom(shape)]);
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['int32'.toJS, jsIntArray, jsArrayFrom(shape)]);
           break;
 
         // Uint8 to Float32
@@ -1062,7 +1059,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           }
 
           final jsFloatArray = _convertToTypedArray(floatArray, 'Float32Array');
-          newTensor = js_util.callConstructor(tensorClass, ['float32', jsFloatArray, jsArrayFrom(shape)]);
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['float32'.toJS, jsFloatArray, jsArrayFrom(shape)]);
           break;
 
         // Boolean to Int8/Uint8
@@ -1077,7 +1074,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           }
 
           final jsByteArray = _convertToTypedArray(byteArray, 'Uint8Array');
-          newTensor = js_util.callConstructor(tensorClass, ['uint8', jsByteArray, jsArrayFrom(shape)]);
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['uint8'.toJS, jsByteArray, jsArrayFrom(shape)]);
           break;
 
         // Int8/Uint8 to Boolean
@@ -1091,7 +1088,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           }
 
           final jsBoolArray = _convertToTypedArray(boolArray, 'Uint8Array');
-          newTensor = js_util.callConstructor(tensorClass, ['bool', jsBoolArray, jsArrayFrom(shape)]);
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['bool'.toJS, jsBoolArray, jsArrayFrom(shape)]);
           break;
 
         // Same type conversion (no-op)
@@ -1104,7 +1101,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         case 'string-string':
           // Clone the original tensor with the same data
           final newData = getProperty(tensor, 'data');
-          newTensor = js_util.callConstructor(tensorClass, [sourceType, newData, jsArrayFrom(shape)]);
+          newTensor = tensorConstructor.callAsConstructorVarArgs([sourceType.toJS, newData, jsArrayFrom(shape)]);
           break;
 
         default:
