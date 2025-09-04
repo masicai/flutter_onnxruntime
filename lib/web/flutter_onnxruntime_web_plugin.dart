@@ -21,6 +21,10 @@ external WindowJS get _window;
 @JS()
 external JSObject get globalThis;
 
+// Object constructor for creating JavaScript objects
+@JS('Object')
+external JSFunction get objectConstructor;
+
 @JS()
 @staticInterop
 class WindowJS {}
@@ -189,18 +193,43 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
   }
 
   // Helper JS interop utilities
-  JSObject createJSObject() => js_util.newObject<JSObject>();
+  JSObject createJSObject() => objectConstructor.callAsConstructor();
 
   void setProperty(JSObject obj, String name, dynamic value) {
-    js_util.setProperty(obj, name, value);
+    obj.setProperty(name.toJS, value);
   }
 
   dynamic getProperty(JSObject obj, String name) {
-    return js_util.getProperty(obj, name);
+    return obj.getProperty(name.toJS);
   }
 
+  // Method overloads for different argument counts
+  dynamic callMethod0(JSObject obj, String method) {
+    return obj.callMethod(method.toJS);
+  }
+
+  dynamic callMethod1(JSObject obj, String method, dynamic arg1) {
+    return obj.callMethod(method.toJS, arg1);
+  }
+
+  dynamic callMethod2(JSObject obj, String method, dynamic arg1, dynamic arg2) {
+    return obj.callMethod(method.toJS, arg1, arg2);
+  }
+
+  // General case that routes to specific methods
   dynamic callMethod(JSObject obj, String method, List<dynamic> args) {
-    return js_util.callMethod(obj, method, args);
+    switch (args.length) {
+      case 0:
+        return callMethod0(obj, method);
+      case 1:
+        return callMethod1(obj, method, args[0]);
+      case 2:
+        return callMethod2(obj, method, args[0], args[1]);
+      default:
+        // For 3+ arguments, fall back to VarArgs if needed
+        // Note: the cast does not work properly at the moment
+        return obj.callMethodVarArgs(method.toJS, args.cast<JSAny?>());
+    }
   }
 
   JSObject jsArrayFrom(List<dynamic> list) {
