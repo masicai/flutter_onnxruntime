@@ -138,21 +138,21 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
             }).toList();
 
         // Set executionProviders property
-        setProperty(jsOptions, 'executionProviders', jsArrayFrom(jsProviders));
+        jsOptions.setProperty('executionProviders'.toJS, jsArrayFrom(jsProviders));
       }
 
       // Set other options like intraOpNumThreads, interOpNumThreads if needed
       if (options.containsKey('intraOpNumThreads')) {
-        setProperty(jsOptions, 'intraOpNumThreads', options['intraOpNumThreads']);
+        jsOptions.setProperty('intraOpNumThreads'.toJS, options['intraOpNumThreads']);
       }
 
       if (options.containsKey('interOpNumThreads')) {
-        setProperty(jsOptions, 'interOpNumThreads', options['interOpNumThreads']);
+        jsOptions.setProperty('interOpNumThreads'.toJS, options['interOpNumThreads']);
       }
 
       // Handle graph optimization level
       if (options.containsKey('graphOptimizationLevel')) {
-        setProperty(jsOptions, 'graphOptimizationLevel', options['graphOptimizationLevel']);
+        jsOptions.setProperty('graphOptimizationLevel'.toJS, options['graphOptimizationLevel']);
       }
 
       // Add more options as needed
@@ -167,7 +167,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
     try {
       // Get the InferenceSession class from onnxruntime-web
-      final inferenceSession = getProperty(_ort, 'InferenceSession');
+      final inferenceSession = _ort.getProperty('InferenceSession'.toJS) as JSObject;
 
       // Use the create method to create a session - async operation
       final createPromise = callMethod(inferenceSession, 'create', [modelPath, options]);
@@ -186,8 +186,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
   List<String> getInputNames(JSObject session) {
     final inputNames = <String>[];
     try {
-      final inputs = getProperty(session, 'inputNames');
-      final length = getProperty(inputs, 'length') as int;
+      final inputs = session.getProperty('inputNames'.toJS) as JSObject;
+      final length = (inputs.getProperty('length'.toJS) as JSNumber).toDartInt;
 
       for (var i = 0; i < length; i++) {
         final name = callMethod(inputs, 'at', [i]);
@@ -203,8 +203,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
   List<String> getOutputNames(JSObject session) {
     final outputNames = <String>[];
     try {
-      final outputs = getProperty(session, 'outputNames');
-      final length = getProperty(outputs, 'length') as int;
+      final outputs = session.getProperty('outputNames'.toJS) as JSObject;
+      final length = (outputs.getProperty('length'.toJS) as JSNumber).toDartInt;
 
       for (var i = 0; i < length; i++) {
         final name = callMethod(outputs, 'at', [i]);
@@ -218,14 +218,6 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
   // Helper JS interop utilities
   JSObject createJSObject() => objectConstructor.callAsConstructor();
-
-  void setProperty(JSObject obj, String name, dynamic value) {
-    obj.setProperty(name.toJS, value);
-  }
-
-  dynamic getProperty(JSObject obj, String name) {
-    return obj.getProperty(name.toJS);
-  }
 
   // Method overloads for different argument counts
   dynamic callMethod0(JSObject obj, String method) {
@@ -319,7 +311,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         }
 
         // Add to inputs object
-        setProperty(jsInputs, name, tensor);
+        jsInputs.setProperty(name.toJS, tensor);
       }
 
       // Create run options if provided
@@ -329,15 +321,15 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
         // Set run options if needed
         if (runOptions.containsKey('logSeverityLevel')) {
-          setProperty(jsRunOptions, 'logSeverityLevel', runOptions['logSeverityLevel']);
+          jsRunOptions.setProperty('logSeverityLevel'.toJS, runOptions['logSeverityLevel']);
         }
 
         if (runOptions.containsKey('logVerbosityLevel')) {
-          setProperty(jsRunOptions, 'logVerbosityLevel', runOptions['logVerbosityLevel']);
+          jsRunOptions.setProperty('logVerbosityLevel'.toJS, runOptions['logVerbosityLevel']);
         }
 
         if (runOptions.containsKey('terminate')) {
-          setProperty(jsRunOptions, 'terminate', runOptions['terminate']);
+          jsRunOptions.setProperty('terminate'.toJS, runOptions['terminate']);
         }
       }
 
@@ -356,7 +348,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
       for (final name in outputNames) {
         if (hasProperty(jsOutputs, name)) {
-          final tensor = getProperty(jsOutputs, name);
+          final tensor = jsOutputs.getProperty(name.toJS) as JSObject;
 
           // Create a new OrtValue and store it
           final valueId = '${DateTime.now().millisecondsSinceEpoch}_${math.Random().nextInt(10000)}';
@@ -364,11 +356,11 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           _ortValues[valueId] = tensor;
 
           // Get tensor type
-          final type = getProperty(tensor, 'type').toString();
+          final type = tensor.getProperty('type'.toJS).toString();
 
           // Get tensor shape
-          final jsShape = getProperty(tensor, 'dims');
-          final shapeLength = getProperty(jsShape, 'length') as int;
+          final jsShape = tensor.getProperty('dims'.toJS) as JSObject;
+          final shapeLength = (jsShape.getProperty('length'.toJS) as JSNumber).toDartInt;
           final shape = <int>[];
 
           for (var i = 0; i < shapeLength; i++) {
@@ -459,41 +451,41 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
       // Check if the session has metadata property (Recent versions of ONNX Runtime JS API may have this)
       if (hasProperty(session, 'metadata')) {
-        final metadata = getProperty(session, 'metadata');
+        final metadata = session.getProperty('metadata'.toJS) as JSObject;
 
         // Extract metadata properties if they exist
         if (hasProperty(metadata, 'producerName')) {
-          metadataMap['producerName'] = getProperty(metadata, 'producerName').toString();
+          metadataMap['producerName'] = metadata.getProperty('producerName'.toJS).toString();
         }
 
         if (hasProperty(metadata, 'graphName')) {
-          metadataMap['graphName'] = getProperty(metadata, 'graphName').toString();
+          metadataMap['graphName'] = metadata.getProperty('graphName'.toJS).toString();
         }
 
         if (hasProperty(metadata, 'domain')) {
-          metadataMap['domain'] = getProperty(metadata, 'domain').toString();
+          metadataMap['domain'] = metadata.getProperty('domain'.toJS).toString();
         }
 
         if (hasProperty(metadata, 'description')) {
-          metadataMap['description'] = getProperty(metadata, 'description').toString();
+          metadataMap['description'] = metadata.getProperty('description'.toJS).toString();
         }
 
         if (hasProperty(metadata, 'version')) {
-          metadataMap['version'] = getProperty(metadata, 'version');
+          metadataMap['version'] = metadata.getProperty('version'.toJS).toString();
         }
 
         if (hasProperty(metadata, 'customMetadataMap')) {
-          final customMap = getProperty(metadata, 'customMetadataMap');
+          final customMap = metadata.getProperty('customMetadataMap'.toJS) as JSObject;
           final customMetadataMap = <String, String>{};
 
           // Convert JavaScript object to Dart map
           // Use Object.keys() from JavaScript to get the keys of the object
           final keysObj = callMethod(objectGlobal, 'keys', [customMap]);
-          final length = getProperty(keysObj, 'length') as int;
+          final length = (keysObj.getProperty('length'.toJS) as JSNumber).toDartInt;
 
           for (var i = 0; i < length; i++) {
             final key = callMethod(keysObj, 'at', [i]).toString();
-            final value = getProperty(customMap, key).toString();
+            final value = customMap.getProperty(key.toJS).toString();
             customMetadataMap[key] = value;
           }
 
@@ -523,24 +515,24 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
       // Get input metadata from session if available
       if (hasProperty(session, 'inputMetadata')) {
-        final inputMetadata = getProperty(session, 'inputMetadata');
-        final length = getProperty(inputMetadata, 'length') as int;
+        final inputMetadata = session.getProperty('inputMetadata'.toJS) as JSObject;
+        final length = (inputMetadata.getProperty('length'.toJS) as JSNumber).toDartInt;
 
         for (var i = 0; i < length; i++) {
           final info = callMethod(inputMetadata, 'at', [i]);
           final infoMap = <String, dynamic>{};
 
           // Add name
-          infoMap['name'] = getProperty(info, 'name').toString();
+          infoMap['name'] = info.getProperty('name'.toJS).toString();
 
           // Check if it's a tensor
-          final isTensor = getProperty(info, 'isTensor') as bool;
+          final isTensor = info.getProperty('isTensor'.toJS) as bool;
 
           if (isTensor) {
             // Add shape if available
             if (hasProperty(info, 'shape')) {
-              final shape = getProperty(info, 'shape');
-              final shapeLength = getProperty(shape, 'length') as int;
+              final shape = info.getProperty('shape'.toJS);
+              final shapeLength = (shape.getProperty('length'.toJS) as JSNumber).toDartInt;
               final shapeList = <int>[];
 
               for (var j = 0; j < shapeLength; j++) {
@@ -561,7 +553,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
             // Add type if available
             if (hasProperty(info, 'type')) {
-              infoMap['type'] = getProperty(info, 'type').toString();
+              infoMap['type'] = info.getProperty('type'.toJS).toString();
             } else {
               infoMap['type'] = 'unknown';
             }
@@ -603,24 +595,24 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
       // Get output metadata from session if available
       if (hasProperty(session, 'outputMetadata')) {
-        final outputMetadata = getProperty(session, 'outputMetadata');
-        final length = getProperty(outputMetadata, 'length') as int;
+        final outputMetadata = session.getProperty('outputMetadata'.toJS) as JSObject;
+        final length = (outputMetadata.getProperty('length'.toJS) as JSNumber).toDartInt;
 
         for (var i = 0; i < length; i++) {
           final info = callMethod(outputMetadata, 'at', [i]);
           final infoMap = <String, dynamic>{};
 
           // Add name
-          infoMap['name'] = getProperty(info, 'name').toString();
+          infoMap['name'] = info.getProperty('name'.toJS).toString();
 
           // Check if it's a tensor
-          final isTensor = getProperty(info, 'isTensor') as bool;
+          final isTensor = info.getProperty('isTensor'.toJS) as bool;
 
           if (isTensor) {
             // Add shape if available
             if (hasProperty(info, 'shape')) {
-              final shape = getProperty(info, 'shape');
-              final shapeLength = getProperty(shape, 'length') as int;
+              final shape = info.getProperty('shape'.toJS);
+              final shapeLength = (shape.getProperty('length'.toJS) as JSNumber).toDartInt;
               final shapeList = <int>[];
 
               for (var j = 0; j < shapeLength; j++) {
@@ -641,7 +633,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
             // Add type if available
             if (hasProperty(info, 'type')) {
-              infoMap['type'] = getProperty(info, 'type').toString();
+              infoMap['type'] = info.getProperty('type'.toJS).toString();
             } else {
               infoMap['type'] = 'unknown';
             }
@@ -826,11 +818,11 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       final tensor = _ortValues[valueId]!;
 
       // Get tensor type
-      final type = getProperty(tensor, 'type');
+      final type = tensor.getProperty('type'.toJS);
 
       // Get tensor shape
-      final jsShape = getProperty(tensor, 'dims');
-      final shapeLength = getProperty(jsShape, 'length') as int;
+      final jsShape = tensor.getProperty('dims'.toJS) as JSObject;
+      final shapeLength = (jsShape.getProperty('length'.toJS) as JSNumber).toDartInt;
       final shape = <int>[];
 
       // Convert shape to Dart list
@@ -839,8 +831,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       }
 
       // Get tensor data
-      final jsData = getProperty(tensor, 'data');
-      final dataLength = getProperty(jsData, 'length') as int;
+      final jsData = tensor.getProperty('data'.toJS) as JSObject;
+      final dataLength = (jsData.getProperty('length'.toJS) as JSNumber).toDartInt;
       final data = <dynamic>[];
 
       // Convert data to Dart list based on type
@@ -944,9 +936,9 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       final tensor = _ortValues[valueId]!;
 
       // Get tensor type and shape
-      final sourceType = getProperty(tensor, 'type').toString();
-      final jsShape = getProperty(tensor, 'dims');
-      final shapeLength = getProperty(jsShape, 'length') as int;
+      final sourceType = tensor.getProperty('type'.toJS).toString();
+      final jsShape = tensor.getProperty('dims'.toJS) as JSObject;
+      final shapeLength = (jsShape.getProperty('length'.toJS) as JSNumber).toDartInt;
       final shape = <int>[];
 
       for (var i = 0; i < shapeLength; i++) {
@@ -954,8 +946,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       }
 
       // Get the data from the tensor
-      final jsData = getProperty(tensor, 'data');
-      final dataLength = getProperty(jsData, 'length') as int;
+      final jsData = tensor.getProperty('data'.toJS) as JSObject;
+      final dataLength = (jsData.getProperty('length'.toJS) as JSNumber).toDartInt;
 
       // Create a new tensor based on the conversion type
       JSObject newTensor;
@@ -1100,7 +1092,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         case 'bool-bool':
         case 'string-string':
           // Clone the original tensor with the same data
-          final newData = getProperty(tensor, 'data');
+          final newData = tensor.getProperty('data'.toJS);
           newTensor = tensorConstructor.callAsConstructorVarArgs([sourceType.toJS, newData, jsArrayFrom(shape)]);
           break;
 
