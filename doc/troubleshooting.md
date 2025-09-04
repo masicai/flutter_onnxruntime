@@ -23,21 +23,27 @@ Common issues and their solutions.
 ## iOS
 * Target minimum version: iOS 16
     * Open `ios/Podfile` and change the target minimum version to 16.0
-        ```
+        ```pod
         platform :ios, '16.0'
         ```
 * "The 'Pods-Runner' target has transitive dependencies that include statically linked binaries: (onnxruntime-objc and onnxruntime-c)". In `Podfile` change:
-    ```
+    ```pod
     target 'Runner' do
     use_frameworks! :linkage => :static
     ```
 * `RuntimeException` while running Reshape node with "input_shape_size == size was false"
     If you are using an ORT optimized model, it's possible that there is some certain nodes that is not supported by ORT. Try using the original ONNX model (without ORT optimization) to see if the issue persists.
+* `CocoaPods could not find compatible versions for pod "onnxruntime-objc"`:
+    This usually happens when you have an older version of `onnxruntime-objc` installed in your local CocoaPods repository. Try running the following command to update your local CocoaPods repository:
+    ```
+    cd ios/
+    pod update onnxruntime-objc
+    ```
 
 ## macOS
 * Target minimum version: MacOS 14
     * Open `macos/Podfile` and change the target minimum version to 14.0
-        ```
+        ```pod
         platform :osx, '14.0'
         ```
     * "error: compiling for macOS 10.14, but module 'flutter_onnxruntime' has a minimum deployment target of macOS 14.0".
