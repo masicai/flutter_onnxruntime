@@ -1,3 +1,8 @@
+## 1.5.1
+* Upgrade ONNX Runtime to version 1.22.0 for 16KB Page Size support in Android (#39)
+* Fix Linux build issues in CMake and X11 display server (#37)
+* Upgrade Kotlin version to 2.1.0 (#38)
+
 ## 1.4.3
 * Fix an issue with input name-value mismatch in Windows (#28 #29)
 * Add more integration tests for input name and order consistency
