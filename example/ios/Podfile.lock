@@ -2,14 +2,14 @@ PODS:
   - Flutter (1.0.0)
   - flutter_onnxruntime (0.0.1):
     - Flutter
-    - onnxruntime-objc (= 1.21.0)
+    - onnxruntime-objc (= 1.22.0)
   - integration_test (0.0.1):
     - Flutter
-  - onnxruntime-c (1.21.0)
-  - onnxruntime-objc (1.21.0):
-    - onnxruntime-objc/Core (= 1.21.0)
-  - onnxruntime-objc/Core (1.21.0):
-    - onnxruntime-c (= 1.21.0)
+  - onnxruntime-c (1.22.0)
+  - onnxruntime-objc (1.22.0):
+    - onnxruntime-objc/Core (= 1.22.0)
+  - onnxruntime-objc/Core (1.22.0):
+    - onnxruntime-c (= 1.22.0)
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -36,12 +36,12 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
 
 SPEC CHECKSUMS:
-  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  flutter_onnxruntime: 6afe8df64bc61cd63cf47d17fecf4d024655a76b
-  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
-  onnxruntime-c: ac65025f01072d25d7d394a2b43ac30d9397b260
-  onnxruntime-objc: 5fa03134356d47b642ec85b1023d9907a123d201
-  path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_onnxruntime: 588dcdd569f6ac3e8e943d4340b4b161db0d4fe8
+  integration_test: 252f60fa39af5e17c3aa9899d35d908a0721b573
+  onnxruntime-c: 7f778680e96145956c0a31945f260321eed2611a
+  onnxruntime-objc: 83d28b87525bd971259a66e153ea32b5d023de19
+  path_provider_foundation: 2b6b4c569c0fb62ec74538f866245ac84301af46
 
 PODFILE CHECKSUM: c0915517eae1a513480956f02c7781054ca94770
 
