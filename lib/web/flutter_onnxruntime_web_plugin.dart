@@ -42,6 +42,10 @@ external JSFunction get bigInt64ArrayConstructor;
 @JS('Uint8Array')
 external JSFunction get uint8ArrayConstructor;
 
+// ONNX Runtime Tensor constructor
+@JS('ort.Tensor')
+external JSFunction get tensorConstructor;
+
 @JS()
 @staticInterop
 class WindowJS {}
@@ -253,8 +257,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
     return callMethod(arrayConstructor, 'from', [list]);
   }
 
-  Future<T> promiseToFuture<T>(JSObject promise) {
-    return js_util.promiseToFuture<T>(promise);
+  Future<T> promiseToFuture<T extends JSAny?>(JSObject promise) {
+    return (promise as JSPromise<T>).toDart;
   }
 
   @override
@@ -678,9 +682,6 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
   @override
   Future<Map<String, dynamic>> createOrtValue(String sourceType, dynamic data, List<int> shape) async {
     try {
-      // Get the Tensor constructor from onnxruntime-web
-      final tensorClass = getProperty(_ort, 'Tensor');
-
       // Convert shape to JavaScript array
       final jsShape = jsArrayFrom(shape);
 
@@ -694,26 +695,26 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         case 'float32':
           // Convert data to Float32Array
           final jsData = _convertToTypedArray(data, 'Float32Array');
-          tensor = js_util.callConstructor(tensorClass, [dataType, jsData, jsShape]);
+          tensor = tensorConstructor.callAsConstructorVarArgs([dataType.toJS, jsData, jsShape]);
           break;
 
         case 'int32':
           // Convert data to Int32Array
           final jsData = _convertToTypedArray(data, 'Int32Array');
-          tensor = js_util.callConstructor(tensorClass, [dataType, jsData, jsShape]);
+          tensor = tensorConstructor.callAsConstructorVarArgs([dataType.toJS, jsData, jsShape]);
           break;
 
         case 'int64':
           // Note: JavaScript doesn't have Int64Array, so using BigInt64Array
           // This might require special handling depending on browser support
           final jsData = _convertToTypedArray(data, 'BigInt64Array');
-          tensor = js_util.callConstructor(tensorClass, [dataType, jsData, jsShape]);
+          tensor = tensorConstructor.callAsConstructorVarArgs([dataType.toJS, jsData, jsShape]);
           break;
 
         case 'uint8':
           // Convert data to Uint8Array
           final jsData = _convertToTypedArray(data, 'Uint8Array');
-          tensor = js_util.callConstructor(tensorClass, [dataType, jsData, jsShape]);
+          tensor = tensorConstructor.callAsConstructorVarArgs([dataType.toJS, jsData, jsShape]);
           break;
 
         case 'bool':
@@ -730,14 +731,14 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
                 }
               }).toList();
           final jsData = _convertToTypedArray(boolArray, 'Uint8Array');
-          tensor = js_util.callConstructor(tensorClass, [dataType, jsData, jsShape]);
+          tensor = tensorConstructor.callAsConstructorVarArgs([dataType.toJS, jsData, jsShape]);
           break;
 
         case 'string':
           // For string tensors, we use the standard JavaScript Array
           // ONNX Runtime JS API accepts string arrays for string tensors
           final stringArray = jsArrayFrom((data as List<String>).toList());
-          tensor = js_util.callConstructor(tensorClass, [dataType, stringArray, jsShape]);
+          tensor = tensorConstructor.callAsConstructorVarArgs([dataType.toJS, stringArray, jsShape]);
           break;
 
         default:
