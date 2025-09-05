@@ -32,6 +32,10 @@ We use a pre-commit hook to ensure code quality and consistency. Follow these st
      # macOS
      brew install clang-format
      ```
+   - **cmake-format** (for CMake formatting):
+     ```
+     pip install cmake-format
+     ```
 
 2. Copy the pre-commit hook to your local Git hooks directory:
    ```
