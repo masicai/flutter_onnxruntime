@@ -1,6 +1,5 @@
-# The Flutter tooling requires that developers have CMake 3.10 or later
-# installed. You should not increase this version, as doing so will cause the
-# plugin to fail to compile for some customers of the plugin.
+# The Flutter tooling requires that developers have CMake 3.10 or later installed. You should not increase this version,
+# as doing so will cause the plugin to fail to compile for some customers of the plugin.
 cmake_minimum_required(VERSION 3.28) # required by onnxruntime-extensions
 
 # Set policy for FetchContent timestamp handling
@@ -12,14 +11,13 @@ endif()
 set(PROJECT_NAME "flutter_onnxruntime")
 project(${PROJECT_NAME} LANGUAGES CXX)
 
-# This value is used when generating builds using this plugin, so it must not be
-# changed.
+# This value is used when generating builds using this plugin, so it must not be changed.
 set(PLUGIN_NAME "flutter_onnxruntime_plugin")
 
 # ======== ONNXRUNTIME CONFIGURATION ========
 
-# Set ONNX Runtime version - make sure this is defined Only set if not already
-# defined, to allow the parent project to override it
+# Set ONNX Runtime version - make sure this is defined Only set if not already defined, to allow the parent project to
+# override it
 if(NOT DEFINED ONNXRUNTIME_VERSION)
   set(ONNXRUNTIME_VERSION
       "1.21.0"
@@ -47,10 +45,8 @@ else()
 endif()
 
 # Define build options for ONNX Runtime
-option(USE_ONNXRUNTIME_EXTENSIONS
-       "Use ONNX Runtime Extensions as a separate library" OFF)
-option(USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS
-       "Build ONNX Runtime with built-in extensions" OFF)
+option(USE_ONNXRUNTIME_EXTENSIONS "Use ONNX Runtime Extensions as a separate library" OFF)
+option(USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS "Build ONNX Runtime with built-in extensions" OFF)
 
 # Check for environment variables
 if(DEFINED ENV{USE_ONNXRUNTIME_EXTENSIONS})
@@ -61,9 +57,7 @@ if(DEFINED ENV{USE_ONNXRUNTIME_EXTENSIONS})
   endif()
 
   if(NOT ONNXRUNTIME_FOUND)
-    message(
-      STATUS
-        "System ONNX Runtime not found. Falling back to downloaded version.")
+    message(STATUS "System ONNX Runtime not found. Falling back to downloaded version.")
     set(USE_SYSTEM_ONNXRUNTIME OFF)
   endif()
 endif()
@@ -78,23 +72,14 @@ endif()
 
 # We can't use both options at the same time
 if(USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS AND USE_ONNXRUNTIME_EXTENSIONS)
-  message(
-    STATUS
-      "Both USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS and USE_ONNXRUNTIME_EXTENSIONS are enabled."
-  )
-  message(
-    STATUS
-      "Since built-in extensions are requested, USE_ONNXRUNTIME_EXTENSIONS will be turned OFF."
-  )
+  message(STATUS "Both USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS and USE_ONNXRUNTIME_EXTENSIONS are enabled.")
+  message(STATUS "Since built-in extensions are requested, USE_ONNXRUNTIME_EXTENSIONS will be turned OFF.")
   set(USE_ONNXRUNTIME_EXTENSIONS OFF)
 endif()
 
 message(STATUS "Using ONNX Runtime version: ${ONNXRUNTIME_VERSION}")
 message(STATUS "USE_ONNXRUNTIME_EXTENSIONS: ${USE_ONNXRUNTIME_EXTENSIONS}")
-message(
-  STATUS
-    "USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS: ${USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS}"
-)
+message(STATUS "USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS: ${USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS}")
 
 include(FetchContent)
 
@@ -107,8 +92,7 @@ set(flutter_onnxruntime_bundled_libraries "")
 
 if(USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS)
   # ======== BUILD ONNXRUNTIME FROM SOURCE WITH BUILT-IN EXTENSIONS ========
-  message(
-    STATUS "Building ONNX Runtime from source with built-in extensions...")
+  message(STATUS "Building ONNX Runtime from source with built-in extensions...")
 
   # Download ONNX Runtime source code - using MakeAvailable instead of Populate
   FetchContent_Declare(
@@ -138,8 +122,8 @@ if(USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS)
   if(NOT onnxruntime_extensions_POPULATED)
     FetchContent_Populate(onnxruntime_extensions)
   endif()
-  # Set ONNX Runtime version - make sure this is defined Only set if not already
-  # defined, to allow the parent project to override it
+  # Set ONNX Runtime version - make sure this is defined Only set if not already defined, to allow the parent project to
+  # override it
   if(NOT DEFINED ONNXRUNTIME_VERSION)
     set(ONNXRUNTIME_VERSION
         "1.22.0"
@@ -172,25 +156,20 @@ if(USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS)
 
   # Install Python dependencies first to ensure build succeeds
   execute_process(
-    COMMAND ${Python3_EXECUTABLE} -m pip install -r
-            ${onnxruntime_SOURCE_DIR}/requirements.txt
+    COMMAND ${Python3_EXECUTABLE} -m pip install -r ${onnxruntime_SOURCE_DIR}/requirements.txt
     RESULT_VARIABLE PIP_RESULT
     OUTPUT_VARIABLE PIP_OUTPUT
     ERROR_VARIABLE PIP_ERROR)
 
   if(NOT PIP_RESULT EQUAL 0)
-    message(
-      WARNING
-        "Failed to install Python dependencies. The build might fail. Error: ${PIP_ERROR}"
-    )
+    message(WARNING "Failed to install Python dependencies. The build might fail. Error: ${PIP_ERROR}")
   endif()
 
   # Run the build script with extensions
   execute_process(
     COMMAND
-      ${Python3_EXECUTABLE} ${onnxruntime_SOURCE_DIR}/tools/ci_build/build.py
-      --build_dir ${ORT_BUILD_DIR} --config Release --skip_tests --parallel
-      ${ORT_ARCH_FLAGS} --update --build_shared_lib --use_extensions
+      ${Python3_EXECUTABLE} ${onnxruntime_SOURCE_DIR}/tools/ci_build/build.py --build_dir ${ORT_BUILD_DIR} --config
+      Release --skip_tests --parallel ${ORT_ARCH_FLAGS} --update --build_shared_lib --use_extensions
       --extensions_overridden_path ${onnxruntime_extensions_SOURCE_DIR}
     WORKING_DIRECTORY ${onnxruntime_SOURCE_DIR}
     RESULT_VARIABLE ORT_BUILD_RESULT
@@ -226,15 +205,12 @@ if(USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS)
 
     # If not found, try a recursive search
     if(NOT ONNXRUNTIME_LIBRARY)
-      file(GLOB_RECURSE ORT_SHARED_LIBS
-           "${ORT_BUILD_DIR}/**/libonnxruntime*.so*")
+      file(GLOB_RECURSE ORT_SHARED_LIBS "${ORT_BUILD_DIR}/**/libonnxruntime*.so*")
 
       if(ORT_SHARED_LIBS)
         foreach(LIB ${ORT_SHARED_LIBS})
           message(STATUS "Found ONNX Runtime library: ${LIB}")
-          if((LIB MATCHES "libonnxruntime\\.so$" OR LIB MATCHES
-                                                    "libonnxruntime\\.so\\..*")
-             AND NOT ONNXRUNTIME_LIBRARY)
+          if((LIB MATCHES "libonnxruntime\\.so$" OR LIB MATCHES "libonnxruntime\\.so\\..*") AND NOT ONNXRUNTIME_LIBRARY)
             set(ONNXRUNTIME_LIBRARY ${LIB})
           endif()
         endforeach()
@@ -249,8 +225,7 @@ if(USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS)
       list(APPEND ONNXRUNTIME_LIBRARIES ${ONNXRUNTIME_LIBRARY})
       list(APPEND flutter_onnxruntime_bundled_libraries ${ONNXRUNTIME_LIBRARY})
 
-      # Since the library was built with extensions, it already has them
-      # built-in
+      # Since the library was built with extensions, it already has them built-in
       add_definitions(-DBUILT_IN_ONNXRUNTIME_EXTENSIONS_AVAILABLE)
     else()
       message(
@@ -262,8 +237,7 @@ if(USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS)
 
 else()
   # ======== DOWNLOAD PRE-BUILT ONNXRUNTIME ========
-  # Set download URL with correct naming pattern for 1.22.0 Make sure all parts
-  # of the version are included
+  # Set download URL with correct naming pattern for 1.22.0 Make sure all parts of the version are included
   set(ONNXRUNTIME_URL
       "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}.tgz"
   )
@@ -273,8 +247,7 @@ else()
   # Create a directory for the downloaded library
   set(ONNXRUNTIME_DOWNLOAD_DIR "${CMAKE_CURRENT_BINARY_DIR}/onnxruntime")
 
-  # Download and extract ONNX Runtime - using file(DOWNLOAD) for more direct
-  # control
+  # Download and extract ONNX Runtime - using file(DOWNLOAD) for more direct control
   if(NOT
      EXISTS
      "${ONNXRUNTIME_DOWNLOAD_DIR}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}/include/onnxruntime_cxx_api.h"
@@ -297,15 +270,11 @@ else()
 
   # Set paths to the extracted files
   set(ONNXRUNTIME_EXTRACT_DIR
-      "${ONNXRUNTIME_DOWNLOAD_DIR}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}"
-  )
+      "${ONNXRUNTIME_DOWNLOAD_DIR}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}")
 
   # Verify the directory exists
   if(NOT EXISTS ${ONNXRUNTIME_EXTRACT_DIR})
-    message(
-      FATAL_ERROR
-        "ONNX Runtime extraction directory doesn't exist: ${ONNXRUNTIME_EXTRACT_DIR}"
-    )
+    message(FATAL_ERROR "ONNX Runtime extraction directory doesn't exist: ${ONNXRUNTIME_EXTRACT_DIR}")
   endif()
 
   # Set include and library directories
@@ -323,16 +292,14 @@ else()
     set(ONNXRUNTIME_LIBRARY "${ONNXRUNTIME_EXTRACT_DIR}/lib/libonnxruntime.so")
   else()
     # Try to find the library in case the structure changed
-    file(
-      GLOB_RECURSE ONNXRUNTIME_LIB_CANDIDATES
-      "${ONNXRUNTIME_EXTRACT_DIR}/*onnxruntime*${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    file(GLOB_RECURSE ONNXRUNTIME_LIB_CANDIDATES
+         "${ONNXRUNTIME_EXTRACT_DIR}/*onnxruntime*${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
     if(ONNXRUNTIME_LIB_CANDIDATES)
       list(GET ONNXRUNTIME_LIB_CANDIDATES 0 ONNXRUNTIME_LIBRARY)
       message(STATUS "Found ONNX Runtime library: ${ONNXRUNTIME_LIBRARY}")
     else()
-      message(
-        FATAL_ERROR "Could not find ONNX Runtime library in extracted files")
+      message(FATAL_ERROR "Could not find ONNX Runtime library in extracted files")
     endif()
   endif()
 
@@ -345,16 +312,13 @@ else()
   if(USE_ONNXRUNTIME_EXTENSIONS)
     set(ONNXRUNTIME_EXTENSIONS_LIBRARY "")
 
-    # Set up the version - either match ONNX Runtime or set a specific version
-    # You might want to check compatibility based on your needs
+    # Set up the version - either match ONNX Runtime or set a specific version You might want to check compatibility
+    # based on your needs
     set(ONNXRUNTIME_EXTENSIONS_VERSION
         "0.14.0"
         CACHE STRING "ONNX Runtime Extensions version")
 
-    message(
-      STATUS
-        "Using ONNX Runtime Extensions version: ${ONNXRUNTIME_EXTENSIONS_VERSION}"
-    )
+    message(STATUS "Using ONNX Runtime Extensions version: ${ONNXRUNTIME_EXTENSIONS_VERSION}")
 
     # Download onnxruntime-extensions repository
     FetchContent_Declare(
@@ -372,12 +336,10 @@ else()
       message(STATUS "Building ONNX Runtime Extensions...")
 
       # Ensure build.sh is executable
-      execute_process(
-        COMMAND chmod +x ${onnxruntime_extensions_SOURCE_DIR}/build.sh
-        WORKING_DIRECTORY ${onnxruntime_extensions_SOURCE_DIR})
+      execute_process(COMMAND chmod +x ${onnxruntime_extensions_SOURCE_DIR}/build.sh
+                      WORKING_DIRECTORY ${onnxruntime_extensions_SOURCE_DIR})
 
-      # Set up build parameters - using standard options for better
-      # compatibility
+      # Set up build parameters - using standard options for better compatibility
       set(ONNXRUNTIME_EXTENSIONS_BUILD_OPTIONS
           -DOCOS_BUILD_SHARED_LIB=ON
           -DOCOS_ENABLE_UNIVERSE_OPS=ON
@@ -396,10 +358,7 @@ else()
         ERROR_VARIABLE ONNXRUNTIME_EXTENSIONS_BUILD_ERROR)
 
       if(NOT ONNXRUNTIME_EXTENSIONS_BUILD_RESULT EQUAL 0)
-        message(
-          WARNING
-            "Failed to build ONNX Runtime Extensions. Error code: ${ONNXRUNTIME_EXTENSIONS_BUILD_RESULT}"
-        )
+        message(WARNING "Failed to build ONNX Runtime Extensions. Error code: ${ONNXRUNTIME_EXTENSIONS_BUILD_RESULT}")
         message(STATUS "Build output: ${ONNXRUNTIME_EXTENSIONS_BUILD_OUTPUT}")
         message(STATUS "Build error: ${ONNXRUNTIME_EXTENSIONS_BUILD_ERROR}")
       else()
@@ -416,18 +375,14 @@ else()
           "${onnxruntime_extensions_SOURCE_DIR}/out/Release/lib")
 
       # Set the include and library paths
-      set(ONNXRUNTIME_EXTENSIONS_INCLUDE_DIRS
-          "${onnxruntime_extensions_SOURCE_DIR}/include")
+      set(ONNXRUNTIME_EXTENSIONS_INCLUDE_DIRS "${onnxruntime_extensions_SOURCE_DIR}/include")
 
       # Try to find the built library
       foreach(DIR ${ONNXRUNTIME_EXTENSIONS_BUILD_DIRS})
         foreach(LIB_NAME ${ONNXRUNTIME_EXTENSIONS_LIB_NAMES})
           if(EXISTS "${DIR}/${LIB_NAME}")
             set(ONNXRUNTIME_EXTENSIONS_LIBRARY "${DIR}/${LIB_NAME}")
-            message(
-              STATUS
-                "Found ONNX Runtime Extensions library: ${ONNXRUNTIME_EXTENSIONS_LIBRARY}"
-            )
+            message(STATUS "Found ONNX Runtime Extensions library: ${ONNXRUNTIME_EXTENSIONS_LIBRARY}")
             break()
           endif()
         endforeach()
@@ -438,91 +393,60 @@ else()
 
       if(NOT ONNXRUNTIME_EXTENSIONS_LIBRARY)
         # Try a more generic search using glob
-        file(
-          GLOB_RECURSE
-          ONNXRUNTIME_EXTENSIONS_LIB_CANDIDATES
-          "${onnxruntime_extensions_SOURCE_DIR}/out/**/lib/*ortextensions*${CMAKE_SHARED_LIBRARY_SUFFIX}"
-        )
+        file(GLOB_RECURSE ONNXRUNTIME_EXTENSIONS_LIB_CANDIDATES
+             "${onnxruntime_extensions_SOURCE_DIR}/out/**/lib/*ortextensions*${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
         if(ONNXRUNTIME_EXTENSIONS_LIB_CANDIDATES)
-          list(GET ONNXRUNTIME_EXTENSIONS_LIB_CANDIDATES 0
-               ONNXRUNTIME_EXTENSIONS_LIBRARY)
-          message(
-            STATUS
-              "Found ONNX Runtime Extensions library through glob: ${ONNXRUNTIME_EXTENSIONS_LIBRARY}"
-          )
+          list(GET ONNXRUNTIME_EXTENSIONS_LIB_CANDIDATES 0 ONNXRUNTIME_EXTENSIONS_LIBRARY)
+          message(STATUS "Found ONNX Runtime Extensions library through glob: ${ONNXRUNTIME_EXTENSIONS_LIBRARY}")
         else()
-          message(
-            WARNING
-              "Could not find ONNX Runtime Extensions library in build directory"
-          )
+          message(WARNING "Could not find ONNX Runtime Extensions library in build directory")
         endif()
       endif()
     endif()
 
     # Only add to bundled libs if we found the library
     if(ONNXRUNTIME_EXTENSIONS_LIBRARY)
-      message(
-        STATUS
-          "Will bundle ONNX Runtime Extensions library: ${ONNXRUNTIME_EXTENSIONS_LIBRARY}"
-      )
-      list(APPEND flutter_onnxruntime_bundled_libraries
-           ${ONNXRUNTIME_EXTENSIONS_LIBRARY})
+      message(STATUS "Will bundle ONNX Runtime Extensions library: ${ONNXRUNTIME_EXTENSIONS_LIBRARY}")
+      list(APPEND flutter_onnxruntime_bundled_libraries ${ONNXRUNTIME_EXTENSIONS_LIBRARY})
       add_definitions(-DONNXRUNTIME_EXTENSIONS_AVAILABLE)
 
-      # Define the extension library path as a CMake variable that will be
-      # passed to the code Use file(REAL_PATH) to get the absolute canonical
-      # path to the library
-      file(REAL_PATH "${ONNXRUNTIME_EXTENSIONS_LIBRARY}"
-           ONNXRUNTIME_EXTENSIONS_ABSOLUTE_PATH)
+      # Define the extension library path as a CMake variable that will be passed to the code Use file(REAL_PATH) to get
+      # the absolute canonical path to the library
+      file(REAL_PATH "${ONNXRUNTIME_EXTENSIONS_LIBRARY}" ONNXRUNTIME_EXTENSIONS_ABSOLUTE_PATH)
 
       # Pass the path as a compile definition
-      add_definitions(
-        -DORT_EXTENSIONS_LIB_PATH="${ONNXRUNTIME_EXTENSIONS_ABSOLUTE_PATH}")
-      message(
-        STATUS
-          "Setting ONNX Runtime Extensions library path: ${ONNXRUNTIME_EXTENSIONS_ABSOLUTE_PATH}"
-      )
+      add_definitions(-DORT_EXTENSIONS_LIB_PATH="${ONNXRUNTIME_EXTENSIONS_ABSOLUTE_PATH}")
+      message(STATUS "Setting ONNX Runtime Extensions library path: ${ONNXRUNTIME_EXTENSIONS_ABSOLUTE_PATH}")
     else()
-      message(
-        STATUS
-          "ONNX Runtime Extensions will not be bundled - using fallback mechanism"
-      )
+      message(STATUS "ONNX Runtime Extensions will not be bundled - using fallback mechanism")
     endif()
   endif()
 endif()
 
 # Any new source files that you add to the plugin should be added here.
-list(APPEND PLUGIN_SOURCES "src/flutter_onnxruntime_plugin.cc"
-     "src/session_manager.cc" "src/value_conversion.cc" "src/tensor_manager.cc")
+list(APPEND PLUGIN_SOURCES "src/flutter_onnxruntime_plugin.cc" "src/session_manager.cc" "src/value_conversion.cc"
+     "src/tensor_manager.cc")
 
-# Define the plugin library target. Its name must not be changed (see comment on
-# PLUGIN_NAME above).
+# Define the plugin library target. Its name must not be changed (see comment on PLUGIN_NAME above).
 add_library(${PLUGIN_NAME} SHARED ${PLUGIN_SOURCES})
 
-# Apply a standard set of build settings that are configured in the
-# application-level CMakeLists.txt. This can be removed for plugins that want
-# full control over build settings.
+# Apply a standard set of build settings that are configured in the application-level CMakeLists.txt. This can be
+# removed for plugins that want full control over build settings.
 apply_standard_settings(${PLUGIN_NAME})
 
-# Symbols are hidden by default to reduce the chance of accidental conflicts
-# between plugins. This should not be removed; any symbols that should be
-# exported should be explicitly exported with the FLUTTER_PLUGIN_EXPORT macro.
+# Symbols are hidden by default to reduce the chance of accidental conflicts between plugins. This should not be
+# removed; any symbols that should be exported should be explicitly exported with the FLUTTER_PLUGIN_EXPORT macro.
 set_target_properties(${PLUGIN_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 target_compile_definitions(${PLUGIN_NAME} PRIVATE FLUTTER_PLUGIN_IMPL)
 
 # Enable C++17 features (required for ONNX Runtime 1.22.0+)
 target_compile_features(${PLUGIN_NAME} PRIVATE cxx_std_17)
 
-# Source include directories and library dependencies. Add any plugin-specific
-# dependencies here.
+# Source include directories and library dependencies. Add any plugin-specific dependencies here.
 target_include_directories(
-  ${PLUGIN_NAME}
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-          "${CMAKE_CURRENT_SOURCE_DIR}"
-          "${FLUTTER_EPHEMERAL_DIR}"
-          "${FLUTTER_EPHEMERAL_DIR}/cpp_client_wrapper/include"
-          "${ONNXRUNTIME_INCLUDE_DIRS}")
+  ${PLUGIN_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}" "${FLUTTER_EPHEMERAL_DIR}"
+                         "${FLUTTER_EPHEMERAL_DIR}/cpp_client_wrapper/include" "${ONNXRUNTIME_INCLUDE_DIRS}")
 
 # Install debugging message
 message(STATUS "Include directories: ${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -536,8 +460,7 @@ install(FILES "include/flutter_onnxruntime/flutter_onnxruntime_plugin.h"
 # Install utility header files with the proper path
 install(FILES DESTINATION "${CMAKE_BINARY_DIR}/include")
 
-# Also create symlinks in the build directory to ensure includes work during
-# build
+# Also create symlinks in the build directory to ensure includes work during build
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include/flutter_onnxruntime")
 
 # Copy headers with error handling
@@ -552,17 +475,15 @@ file(
   FOLLOW_SYMLINK_CHAIN)
 
 # Add include directories for the plugin
-target_include_directories(
-  ${PLUGIN_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
-                        $<INSTALL_INTERFACE:include>)
+target_include_directories(${PLUGIN_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+                                                 $<INSTALL_INTERFACE:include>)
 
 # Add ONNX Runtime include directories
 target_include_directories(${PLUGIN_NAME} PRIVATE ${ONNXRUNTIME_INCLUDE_DIRS})
 
 # Add ONNX Runtime Extensions include directories if enabled
 if(USE_ONNXRUNTIME_EXTENSIONS AND ONNXRUNTIME_EXTENSIONS_INCLUDE_DIRS)
-  target_include_directories(${PLUGIN_NAME}
-                             PRIVATE ${ONNXRUNTIME_EXTENSIONS_INCLUDE_DIRS})
+  target_include_directories(${PLUGIN_NAME} PRIVATE ${ONNXRUNTIME_EXTENSIONS_INCLUDE_DIRS})
 endif()
 
 target_link_libraries(${PLUGIN_NAME} PRIVATE flutter)
@@ -573,8 +494,7 @@ target_link_libraries(${PLUGIN_NAME} PRIVATE ${ONNXRUNTIME_LIBRARIES})
 
 # Link against ONNX Runtime Extensions if available
 if(USE_ONNXRUNTIME_EXTENSIONS AND ONNXRUNTIME_EXTENSIONS_LIBRARY)
-  target_link_libraries(${PLUGIN_NAME}
-                        PRIVATE ${ONNXRUNTIME_EXTENSIONS_LIBRARY})
+  target_link_libraries(${PLUGIN_NAME} PRIVATE ${ONNXRUNTIME_EXTENSIONS_LIBRARY})
 endif()
 
 # Add a post-build command to copy ONNX Runtime libraries to the build directory
@@ -582,27 +502,24 @@ foreach(ORT_LIB ${ONNXRUNTIME_LIBRARIES})
   add_custom_command(
     TARGET ${PLUGIN_NAME}
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ORT_LIB}
-            $<TARGET_FILE_DIR:${PLUGIN_NAME}>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ORT_LIB} $<TARGET_FILE_DIR:${PLUGIN_NAME}>
     COMMENT "Copying ONNX Runtime library to build directory: ${ORT_LIB}")
 endforeach()
 
-# Add a post-build command to copy ONNX Runtime Extensions library to the build
-# directory
+# Add a post-build command to copy ONNX Runtime Extensions library to the build directory
 if(USE_ONNXRUNTIME_EXTENSIONS AND ONNXRUNTIME_EXTENSIONS_LIBRARY)
   add_custom_command(
     TARGET ${PLUGIN_NAME}
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${ONNXRUNTIME_EXTENSIONS_LIBRARY} $<TARGET_FILE_DIR:${PLUGIN_NAME}>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ONNXRUNTIME_EXTENSIONS_LIBRARY} $<TARGET_FILE_DIR:${PLUGIN_NAME}>
     COMMENT "Copying ONNX Runtime Extensions library to build directory")
 endif()
 
 # === Tests ===
 # These unit tests can be run from a terminal after building the example.
 
-# Only enable test builds when building the example (which sets this variable)
-# so that plugin clients aren't building the tests.
+# Only enable test builds when building the example (which sets this variable) so that plugin clients aren't building
+# the tests.
 if(${include_${PROJECT_NAME}_tests})
   if(${CMAKE_VERSION} VERSION_LESS "3.11.0")
     message("Unit tests require CMake 3.11.0 or later")
@@ -612,9 +529,8 @@ if(${include_${PROJECT_NAME}_tests})
 
     # Add the Google Test dependency.
     include(FetchContent)
-    FetchContent_Declare(
-      googletest URL https://github.com/google/googletest/archive/v1.17.0.zip
-                     DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+    FetchContent_Declare(googletest URL https://github.com/google/googletest/archive/v1.17.0.zip
+                                        DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
     # Prevent overriding the parent project's compiler/linker settings
     set(gtest_force_shared_crt
         ON
@@ -626,16 +542,12 @@ if(${include_${PROJECT_NAME}_tests})
 
     FetchContent_MakeAvailable(googletest)
 
-    # The plugin's exported API is not very useful for unit testing, so build
-    # the sources directly into the test binary rather than using the shared
-    # library.
-    add_executable(${TEST_RUNNER} test/flutter_onnxruntime_plugin_test.cc
-                                  ${PLUGIN_SOURCES})
+    # The plugin's exported API is not very useful for unit testing, so build the sources directly into the test binary
+    # rather than using the shared library.
+    add_executable(${TEST_RUNNER} test/flutter_onnxruntime_plugin_test.cc ${PLUGIN_SOURCES})
     apply_standard_settings(${TEST_RUNNER})
-    target_include_directories(${TEST_RUNNER}
-                               PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-    target_include_directories(${TEST_RUNNER}
-                               PRIVATE ${ONNXRUNTIME_INCLUDE_DIRS})
+    target_include_directories(${TEST_RUNNER} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_include_directories(${TEST_RUNNER} PRIVATE ${ONNXRUNTIME_INCLUDE_DIRS})
     target_link_libraries(${TEST_RUNNER} PRIVATE flutter)
     target_link_libraries(${TEST_RUNNER} PRIVATE PkgConfig::GTK)
     target_link_libraries(${TEST_RUNNER} PRIVATE ${ONNXRUNTIME_LIBRARIES})
