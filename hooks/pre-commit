@@ -99,16 +99,40 @@ if [ -d "cpp" ] || find . -name "*.cpp" -o -name "*.h" -o -name "*.cc" -o -name 
       if [ $? -ne 0 ]; then
         echo "C++ auto-formatting failed. Please check the output above."
         CPP_LINT_FAILED=1
-      else
-        # Check if any files were modified by clang-format
-        if ! git diff --quiet; then
-          echo "C++ files were automatically formatted. Please add the formatted files to your commit:"
-          git diff --name-only
-          FORMATTING_CHANGES_DETECTED=1
-        fi
       fi
     else
       echo "No general C++ files found to format."
+    fi
+  fi
+fi
+
+# Check for CMakeLists.txt files
+CMAKE_LINT_FAILED=0
+if find . -name "CMakeLists.txt" -not -path "./build/*" -not -path "./.dart_tool/*" -not -path "./example/build/*" | grep -q .; then
+  echo "Running CMake auto-formatting with cmake-format..."
+
+  # Check for cmake-format installation
+  if ! command -v cmake-format > /dev/null 2>&1; then
+    echo "cmake-format not found. Please install it with: 'pip install cmake-format'"
+    echo "Skipping CMake auto-formatting."
+  else
+    # Find CMakeLists.txt files, excluding build directories
+    CMAKE_FILES=$(find . -name "CMakeLists.txt" \
+      -not -path "./build/*" \
+      -not -path "./.dart_tool/*" \
+      -not -path "./example/build/*" \
+      -not -path "./onnxruntime_download/*" -print)
+
+    if [ -n "$CMAKE_FILES" ]; then
+      # Run cmake-format on the found files
+      echo "$CMAKE_FILES" | xargs cmake-format -i
+
+      if [ $? -ne 0 ]; then
+        echo "CMake auto-formatting failed. Please check the output above."
+        CMAKE_LINT_FAILED=1
+      fi
+    else
+      echo "No CMakeLists.txt files found to format."
     fi
   fi
 fi
@@ -126,11 +150,11 @@ if ! git diff --quiet; then
 fi
 
 # Check if any linting failed
-if [ $SWIFT_LINT_FAILED -ne 0 ] || [ $CPP_LINT_FAILED -ne 0 ] || [ $FLUTTER_ANALYZE_RESULT -ne 0 ] || [ $FORMATTING_CHANGES_DETECTED -ne 0 ]; then
+if [ $SWIFT_LINT_FAILED -ne 0 ] || [ $CPP_LINT_FAILED -ne 0 ] || [ $CMAKE_LINT_FAILED -ne 0 ] || [ $FLUTTER_ANALYZE_RESULT -ne 0 ] || [ $FORMATTING_CHANGES_DETECTED -ne 0 ]; then
   if [ $FORMATTING_CHANGES_DETECTED -ne 0 ]; then
     echo "Please add the formatted files to your commit."
   fi
-  if [ $SWIFT_LINT_FAILED -ne 0 ] || [ $CPP_LINT_FAILED -ne 0 ] || [ $FLUTTER_ANALYZE_RESULT -ne 0 ]; then
+  if [ $SWIFT_LINT_FAILED -ne 0 ] || [ $CPP_LINT_FAILED -ne 0 ] || [ $CMAKE_LINT_FAILED -ne 0 ] || [ $FLUTTER_ANALYZE_RESULT -ne 0 ]; then
     echo "Please fix the linting issues before committing."
   fi
   exit 1
