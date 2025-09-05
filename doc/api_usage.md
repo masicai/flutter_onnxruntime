@@ -8,7 +8,25 @@ Add the following dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_onnxruntime: ^1.4.0
+  flutter_onnxruntime: ^1.5.1
+```
+
+
+For web applications, you must include the ONNX Runtime Web library in your `web/index.html` file **before** the Flutter bootstrap script (replace the `onnxruntime-web` version with the target version you want to use):
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- ... other meta tags ... -->
+
+  <!-- Required: Load ONNX Runtime Web before Flutter bootstrap -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/ort.min.js"></script>
+  <script src="flutter_bootstrap.js" async></script>
+</head>
+<body>
+</body>
+</html>
 ```
 
 ## Basic Usage
