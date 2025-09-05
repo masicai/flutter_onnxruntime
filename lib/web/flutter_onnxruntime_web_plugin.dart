@@ -190,7 +190,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       final length = (inputs.getProperty('length'.toJS) as JSNumber).toDartInt;
 
       for (var i = 0; i < length; i++) {
-        final name = callMethod(inputs, 'at', [i]);
+        final name = inputs.getProperty(i.toString().toJS);
         inputNames.add(name.toString());
       }
     } catch (e) {
@@ -207,7 +207,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       final length = (outputs.getProperty('length'.toJS) as JSNumber).toDartInt;
 
       for (var i = 0; i < length; i++) {
-        final name = callMethod(outputs, 'at', [i]);
+        final name = outputs.getProperty(i.toString().toJS);
         outputNames.add(name.toString());
       }
     } catch (e) {
@@ -364,7 +364,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           final shape = <int>[];
 
           for (var i = 0; i < shapeLength; i++) {
-            shape.add(callMethod(jsShape, 'at', [i]) as int);
+            final val = jsShape.getProperty(i.toString().toJS) as JSNumber;
+            shape.add(val.toDartInt);
           }
 
           // Format parameters like native platforms do
@@ -484,7 +485,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           final length = (keysObj.getProperty('length'.toJS) as JSNumber).toDartInt;
 
           for (var i = 0; i < length; i++) {
-            final key = callMethod(keysObj, 'at', [i]).toString();
+            final key = keysObj.getProperty(i.toString().toJS).toString();
             final value = customMap.getProperty(key.toJS).toString();
             customMetadataMap[key] = value;
           }
@@ -519,29 +520,36 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         final length = (inputMetadata.getProperty('length'.toJS) as JSNumber).toDartInt;
 
         for (var i = 0; i < length; i++) {
-          final info = callMethod(inputMetadata, 'at', [i]);
+          final info = inputMetadata.getProperty(i.toJS) as JSObject;
           final infoMap = <String, dynamic>{};
 
           // Add name
           infoMap['name'] = info.getProperty('name'.toJS).toString();
 
           // Check if it's a tensor
-          final isTensor = info.getProperty('isTensor'.toJS) as bool;
+          final isTensorProperty = info.getProperty('isTensor'.toJS);
+          final isTensor = (isTensorProperty as JSBoolean?)?.toDart ?? true;
 
           if (isTensor) {
             // Add shape if available
             if (info.has('shape')) {
-              final shape = info.getProperty('shape'.toJS);
+              final shape = info.getProperty('shape'.toJS) as JSObject;
               final shapeLength = (shape.getProperty('length'.toJS) as JSNumber).toDartInt;
               final shapeList = <int>[];
 
               for (var j = 0; j < shapeLength; j++) {
-                final dim = callMethod(shape, 'at', [j]);
+                final dim = shape.getProperty(j.toString().toJS);
                 // Handle both numeric dimensions and symbolic dimensions
-                if (dim is num) {
-                  shapeList.add(dim.toInt());
+                if (dim != null) {
+                  try {
+                    final numValue = (dim as JSNumber).toDartInt;
+                    shapeList.add(numValue);
+                  } catch (e) {
+                    // For symbolic dimensions or non-numeric values, use -1 as a placeholder
+                    shapeList.add(-1);
+                  }
                 } else {
-                  // For symbolic dimensions, use -1 as a placeholder
+                  // For null values, use -1 as a placeholder
                   shapeList.add(-1);
                 }
               }
@@ -599,29 +607,36 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         final length = (outputMetadata.getProperty('length'.toJS) as JSNumber).toDartInt;
 
         for (var i = 0; i < length; i++) {
-          final info = callMethod(outputMetadata, 'at', [i]);
+          final info = outputMetadata.getProperty(i.toString().toJS) as JSObject;
           final infoMap = <String, dynamic>{};
 
           // Add name
           infoMap['name'] = info.getProperty('name'.toJS).toString();
 
           // Check if it's a tensor
-          final isTensor = info.getProperty('isTensor'.toJS) as bool;
+          final isTensorProperty = info.getProperty('isTensor'.toJS);
+          final isTensor = (isTensorProperty as JSBoolean?)?.toDart ?? true;
 
           if (isTensor) {
             // Add shape if available
             if (info.has('shape')) {
-              final shape = info.getProperty('shape'.toJS);
+              final shape = info.getProperty('shape'.toJS) as JSObject;
               final shapeLength = (shape.getProperty('length'.toJS) as JSNumber).toDartInt;
               final shapeList = <int>[];
 
               for (var j = 0; j < shapeLength; j++) {
-                final dim = callMethod(shape, 'at', [j]);
+                final dim = shape.getProperty(j.toString().toJS);
                 // Handle both numeric dimensions and symbolic dimensions
-                if (dim is num) {
-                  shapeList.add(dim.toInt());
+                if (dim != null) {
+                  try {
+                    final numValue = (dim as JSNumber).toDartInt;
+                    shapeList.add(numValue);
+                  } catch (e) {
+                    // For symbolic dimensions or non-numeric values, use -1 as a placeholder
+                    shapeList.add(-1);
+                  }
                 } else {
-                  // For symbolic dimensions, use -1 as a placeholder
+                  // For null values, use -1 as a placeholder
                   shapeList.add(-1);
                 }
               }
@@ -818,7 +833,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
       // Convert shape to Dart list
       for (var i = 0; i < shapeLength; i++) {
-        shape.add(callMethod(jsShape, 'at', [i]) as int);
+        final dim = jsShape.getProperty(i.toString().toJS) as JSNumber;
+        shape.add(dim.toDartInt);
       }
 
       // Get tensor data
@@ -830,47 +846,50 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       switch (type.toString()) {
         case 'float32':
           for (var i = 0; i < dataLength; i++) {
-            data.add((callMethod(jsData, 'at', [i]) as num).toDouble());
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            data.add(val.toDartDouble);
           }
           break;
 
         case 'int32':
           for (var i = 0; i < dataLength; i++) {
-            data.add((callMethod(jsData, 'at', [i]) as num).toInt());
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            data.add(val.toDartInt);
           }
           break;
 
         case 'int64':
           // BigInt handling
           for (var i = 0; i < dataLength; i++) {
-            final value = callMethod(jsData, 'at', [i]);
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
             // Convert BigInt or similar to standard number if possible
             // For dart:js_interop, try direct conversion to num or int
-            data.add((value as num).toInt());
+            data.add(val.toDartInt);
           }
           break;
 
         case 'uint8':
           for (var i = 0; i < dataLength; i++) {
-            data.add((callMethod(jsData, 'at', [i]) as num).toInt());
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            data.add(val.toDartInt);
           }
           break;
 
         case 'bool':
           for (var i = 0; i < dataLength; i++) {
             // For boolean tensors, convert the numeric values back to proper Dart booleans
-            final value = callMethod(jsData, 'at', [i]) as num;
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
             // Return the actual numeric value (1 or 0), not a boolean,
             // to match native implementations which return 1/0
-            data.add(value != 0 ? 1 : 0);
+            data.add(val.toDartInt != 0 ? 1 : 0);
           }
           break;
 
         case 'string':
           for (var i = 0; i < dataLength; i++) {
+            final val = jsData.getProperty(i.toString().toJS) as JSString;
             // For string tensors, extract string values
-            final value = callMethod(jsData, 'at', [i]);
-            data.add(value.toString());
+            data.add(val.toString());
           }
           break;
 
@@ -933,7 +952,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       final shape = <int>[];
 
       for (var i = 0; i < shapeLength; i++) {
-        shape.add(callMethod(jsShape, 'at', [i]) as int);
+        final val = jsShape.getProperty(i.toString().toJS) as JSNumber;
+        shape.add(val.toDartInt);
       }
 
       // Get the data from the tensor
@@ -949,8 +969,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         case 'float32-int32':
           final intArray = [];
           for (var i = 0; i < dataLength; i++) {
-            final value = callMethod(jsData, 'at', [i]) as num;
-            intArray.add(value.toInt());
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            intArray.add(val.toDartDouble.toInt());
           }
 
           final jsIntArray = _convertToTypedArray(intArray, 'Int32Array');
@@ -972,8 +992,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         case 'int32-float32':
           final floatArray = [];
           for (var i = 0; i < dataLength; i++) {
-            final value = callMethod(jsData, 'at', [i]) as num;
-            floatArray.add(value.toDouble());
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            floatArray.add(val.toDartDouble);
           }
 
           final jsFloatArray = _convertToTypedArray(floatArray, 'Float32Array');
@@ -984,12 +1004,11 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         case 'int64-float32':
           final floatArray = [];
           for (var i = 0; i < dataLength; i++) {
-            final jsValue = callMethod(jsData, 'at', [i]);
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
             // Convert BigInt to double for dart:js_interop
             double doubleValue = 0.0;
             try {
-              final numValue = jsValue as num;
-              doubleValue = numValue.toDouble();
+              doubleValue = val.toDartDouble;
             } catch (e) {
               // Handle conversion errors
               doubleValue = 0.0;
@@ -1016,12 +1035,11 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         case 'int64-int32':
           final intArray = [];
           for (var i = 0; i < dataLength; i++) {
-            final jsValue = callMethod(jsData, 'at', [i]);
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
             // Convert BigInt to int for dart:js_interop
             int intValue = 0;
             try {
-              final numValue = jsValue as num;
-              intValue = numValue.toInt();
+              intValue = val.toDartInt;
             } catch (e) {
               // Handle conversion errors
               intValue = 0;
@@ -1037,8 +1055,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         case 'uint8-float32':
           final floatArray = [];
           for (var i = 0; i < dataLength; i++) {
-            final value = callMethod(jsData, 'at', [i]) as num;
-            floatArray.add(value.toDouble());
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            floatArray.add(val.toDartDouble);
           }
 
           final jsFloatArray = _convertToTypedArray(floatArray, 'Float32Array');
@@ -1052,8 +1070,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           // Just create a new Uint8Array with the same values
           final byteArray = [];
           for (var i = 0; i < dataLength; i++) {
-            final value = callMethod(jsData, 'at', [i]) as num;
-            byteArray.add(value != 0 ? 1 : 0);
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            byteArray.add(val.toDartInt != 0 ? 1 : 0);
           }
 
           final jsByteArray = _convertToTypedArray(byteArray, 'Uint8Array');
@@ -1066,8 +1084,8 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           // Convert to boolean representation (non-zero values become true)
           final boolArray = [];
           for (var i = 0; i < dataLength; i++) {
-            final value = callMethod(jsData, 'at', [i]) as num;
-            boolArray.add(value != 0 ? 1 : 0);
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            boolArray.add(val.toDartInt != 0 ? 1 : 0);
           }
 
           final jsBoolArray = _convertToTypedArray(boolArray, 'Uint8Array');
