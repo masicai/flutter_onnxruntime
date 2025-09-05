@@ -219,6 +219,26 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                         ortSessionOptions.setInterOpNumThreads((sessionOptions["interOpNumThreads"] as Number).toInt())
                     }
 
+                    // Check if enableOrtCustomOps is set to true
+                    if (sessionOptions.containsKey("enableOrtCustomOps") &&
+                        sessionOptions["enableOrtCustomOps"] as Boolean
+                    ) {
+                        try {
+                            // Import the OrtxPackage class to get the library path
+                            // This class is provided by the onnxruntime-extensions-android package
+                            val ortxPackageClass = Class.forName("ai.onnxruntime.extensions.OrtxPackage")
+                            val getLibraryPathMethod = ortxPackageClass.getMethod("getLibraryPath")
+                            val extensionsLibraryPath = getLibraryPathMethod.invoke(null) as String
+
+                            // Register the custom ops library
+                            ortSessionOptions.registerCustomOpLibrary(extensionsLibraryPath)
+                            Log.i("FlutterOnnxruntimePlugin", "Registered ONNX Runtime Extensions from: $extensionsLibraryPath")
+                        } catch (e: Exception) {
+                            // If registration fails, log the error and continue without extensions
+                            Log.e("FlutterOnnxruntimePlugin", "Failed to register custom ops library", e)
+                        }
+                    }
+
                     // get list of providers, default is empty list
                     var providers = emptyList<String>()
                     if (sessionOptions.containsKey("providers")) {
