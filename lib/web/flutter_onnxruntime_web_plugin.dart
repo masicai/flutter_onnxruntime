@@ -347,7 +347,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       final outputNames = getOutputNames(session);
 
       for (final name in outputNames) {
-        if (hasProperty(jsOutputs, name)) {
+        if (jsOutputs.has(name)) {
           final tensor = jsOutputs.getProperty(name.toJS) as JSObject;
 
           // Create a new OrtValue and store it
@@ -450,31 +450,31 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       };
 
       // Check if the session has metadata property (Recent versions of ONNX Runtime JS API may have this)
-      if (hasProperty(session, 'metadata')) {
+      if (session.has('metadata')) {
         final metadata = session.getProperty('metadata'.toJS) as JSObject;
 
         // Extract metadata properties if they exist
-        if (hasProperty(metadata, 'producerName')) {
+        if (metadata.has('producerName')) {
           metadataMap['producerName'] = metadata.getProperty('producerName'.toJS).toString();
         }
 
-        if (hasProperty(metadata, 'graphName')) {
+        if (metadata.has('graphName')) {
           metadataMap['graphName'] = metadata.getProperty('graphName'.toJS).toString();
         }
 
-        if (hasProperty(metadata, 'domain')) {
+        if (metadata.has('domain')) {
           metadataMap['domain'] = metadata.getProperty('domain'.toJS).toString();
         }
 
-        if (hasProperty(metadata, 'description')) {
+        if (metadata.has('description')) {
           metadataMap['description'] = metadata.getProperty('description'.toJS).toString();
         }
 
-        if (hasProperty(metadata, 'version')) {
+        if (metadata.has('version')) {
           metadataMap['version'] = metadata.getProperty('version'.toJS).toString();
         }
 
-        if (hasProperty(metadata, 'customMetadataMap')) {
+        if (metadata.has('customMetadataMap')) {
           final customMap = metadata.getProperty('customMetadataMap'.toJS) as JSObject;
           final customMetadataMap = <String, String>{};
 
@@ -514,7 +514,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       final inputInfoList = <Map<String, dynamic>>[];
 
       // Get input metadata from session if available
-      if (hasProperty(session, 'inputMetadata')) {
+      if (session.has('inputMetadata')) {
         final inputMetadata = session.getProperty('inputMetadata'.toJS) as JSObject;
         final length = (inputMetadata.getProperty('length'.toJS) as JSNumber).toDartInt;
 
@@ -530,7 +530,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
           if (isTensor) {
             // Add shape if available
-            if (hasProperty(info, 'shape')) {
+            if (info.has('shape')) {
               final shape = info.getProperty('shape'.toJS);
               final shapeLength = (shape.getProperty('length'.toJS) as JSNumber).toDartInt;
               final shapeList = <int>[];
@@ -552,7 +552,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
             }
 
             // Add type if available
-            if (hasProperty(info, 'type')) {
+            if (info.has('type')) {
               infoMap['type'] = info.getProperty('type'.toJS).toString();
             } else {
               infoMap['type'] = 'unknown';
@@ -594,7 +594,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       final outputInfoList = <Map<String, dynamic>>[];
 
       // Get output metadata from session if available
-      if (hasProperty(session, 'outputMetadata')) {
+      if (session.has('outputMetadata')) {
         final outputMetadata = session.getProperty('outputMetadata'.toJS) as JSObject;
         final length = (outputMetadata.getProperty('length'.toJS) as JSNumber).toDartInt;
 
@@ -610,7 +610,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
 
           if (isTensor) {
             // Add shape if available
-            if (hasProperty(info, 'shape')) {
+            if (info.has('shape')) {
               final shape = info.getProperty('shape'.toJS);
               final shapeLength = (shape.getProperty('length'.toJS) as JSNumber).toDartInt;
               final shapeList = <int>[];
@@ -632,7 +632,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
             }
 
             // Add type if available
-            if (hasProperty(info, 'type')) {
+            if (info.has('type')) {
               infoMap['type'] = info.getProperty('type'.toJS).toString();
             } else {
               infoMap['type'] = 'unknown';
@@ -659,15 +659,6 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         rethrow;
       }
       throw PlatformException(code: "PLUGIN_ERROR", message: "Failed to get output info: $e", details: null);
-    }
-  }
-
-  // Helper method to check if a JS object has a property
-  bool hasProperty(JSObject obj, String name) {
-    try {
-      return obj.has(name);
-    } catch (e) {
-      return false;
     }
   }
 
@@ -913,7 +904,7 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       final tensor = _ortValues[valueId]!;
 
       // Call dispose method if available to free resources
-      if (hasProperty(tensor, 'dispose')) {
+      if (tensor.has('dispose')) {
         callMethod(tensor, 'dispose', []);
       }
 
