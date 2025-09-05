@@ -1,3 +1,6 @@
+## 1.5.2
+* Migrate the web plugin from `dart:js` to `dart:js_interop` (#40)
+
 ## 1.5.1
 * Upgrade ONNX Runtime to version 1.22.0 for 16KB Page Size support in Android (#39)
 * Fix Linux build issues in CMake and X11 display server (#37)
