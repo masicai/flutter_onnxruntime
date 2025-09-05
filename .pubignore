@@ -3,9 +3,10 @@ hooks/
 onnxruntime_download/
 scripts/
 test/
-doc/generated
+doc/non-pub
 # use this workaround to unignore README: https://stackoverflow.com/questions/32504123/unignore/47994523
 example/*/
 example/analysis_options.yaml
 example/pubspec.yaml
 !example/README.md
+CLAUDE.md
