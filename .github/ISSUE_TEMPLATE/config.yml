@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/masicai/flutter_onnxruntime/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: Documentation
+    url: https://github.com/masicai/flutter_onnxruntime#readme
+    about: Check the README and documentation for usage examples

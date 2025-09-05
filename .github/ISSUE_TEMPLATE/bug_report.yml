@@ -1,0 +1,58 @@
+name: Bug Report
+description: Report a bug in flutter_onnxruntime
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please provide as much detail as possible to help us reproduce and fix the issue.
+  
+  - type: textarea
+    id: issue-descript
+    attributes:
+      label: Describe the issue
+      placeholder: Include your issue description, expected behavior, and any additional context necessary for your issue to be addressed (e.g., screenshots, GPU model & memory, etc.).
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducibility
+    attributes:
+      label: To reproduce
+      placeholder: Steps to reproduce the issue. As applicable, please provide code and model(s) if possible.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Affected Platforms
+      description: Which platform(s) are experiencing this issue?
+      options:
+        - label: Android
+        - label: iOS
+        - label: Linux
+        - label: macOS
+        - label: Windows
+        - label: Web
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: flutter_onnxruntime Version
+      description: What version of flutter_onnxruntime are you using?
+      placeholder: "e.g., 1.5.2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-logs
+    attributes:
+      label: Error Logs
+      description: Any error messages, stack traces, or console output
+      render: shell
+    validations:
+      required: false
