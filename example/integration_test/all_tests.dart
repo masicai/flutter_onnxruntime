@@ -563,7 +563,7 @@ void main() {
       expect(outputInfo[0]['name'], 'C');
 
       // check shape of input and output tensor
-      // Note: Tensor input and output shapes are not available for Web, iOS and macOS
+      // Note: Tensor input and output shapes are not available for iOS and macOS
       if (!kIsWeb && !Platform.isIOS && !Platform.isMacOS) {
         expect(inputInfo[0]['shape'], [-1]);
         expect(inputInfo[1]['shape'], [-1]);

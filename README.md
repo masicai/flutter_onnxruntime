@@ -104,9 +104,8 @@ Clone [this repository](https://github.com/masicai/flutter-onnxruntime-examples)
 | Input/Output names | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Data Type Conversion | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Inference on Emulator | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Input/Output Info | ✅ | ❌* | ✅ | ❌* | ✅ | ❌* |
+| Input/Output Info | ✅ | ❌* | ✅ | ❌* | ✅ | ✅ |
 | Model Metadata | ✅ | ❌* | ✅ | ❌* | ✅ | ❌* |
-| ORT Extensions support | 🚧 | 🚧 | 🚧 | 🚧 | 🚧 | 🚧 |
 | FP16 Support | ✅ | ❌** | ✍️ | ❌** | ✍️ | ✍️ |
 
 ✅: Complete
