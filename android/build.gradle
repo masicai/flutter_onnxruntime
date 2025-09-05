@@ -2,7 +2,7 @@ group = "com.masicai.flutteronnxruntime"
 version = "1.0-SNAPSHOT"
 
 buildscript {
-    ext.kotlin_version = "1.8.22"
+    ext.kotlin_version = "2.1.0"
     repositories {
         google()
         mavenCentral()
@@ -51,7 +51,7 @@ android {
         testImplementation("org.jetbrains.kotlin:kotlin-test")
         testImplementation("org.mockito:mockito-core:5.0.0")
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-        implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.21.0'
+        implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.22.0'
         implementation 'com.microsoft.onnxruntime:onnxruntime-extensions-android:0.13.0'
     }
 

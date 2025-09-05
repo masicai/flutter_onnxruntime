@@ -296,9 +296,10 @@ std::vector<TensorInfo> SessionManager::getOutputInfo(const std::string &session
   return info_list;
 }
 
-// Run inference
+// Run inference with provided input names
 std::vector<Ort::Value> SessionManager::runInference(const std::string &session_id,
                                                      const std::vector<Ort::Value> &input_tensors,
+                                                     const std::vector<std::string> &input_names,
                                                      Ort::RunOptions *run_options) {
 
   std::lock_guard<std::mutex> lock(mutex_);
@@ -318,9 +319,13 @@ std::vector<Ort::Value> SessionManager::runInference(const std::string &session_
     throw Ort::Exception("No input tensors provided", ORT_INVALID_ARGUMENT);
   }
 
+  if (input_names.size() != input_tensors.size()) {
+    throw Ort::Exception("Number of input names must match number of input tensors", ORT_INVALID_ARGUMENT);
+  }
+
   // Prepare input names
   std::vector<const char *> input_names_char;
-  for (const auto &name : it->second.input_names) {
+  for (const auto &name : input_names) {
     input_names_char.push_back(name.c_str());
   }
 

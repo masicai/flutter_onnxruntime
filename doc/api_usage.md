@@ -8,7 +8,25 @@ Add the following dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_onnxruntime: ^1.4.0
+  flutter_onnxruntime: ^1.5.1
+```
+
+
+For web applications, you must include the ONNX Runtime Web library in your `web/index.html` file **before** the Flutter bootstrap script (replace the `onnxruntime-web` version with the target version you want to use):
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- ... other meta tags ... -->
+
+  <!-- Required: Load ONNX Runtime Web before Flutter bootstrap -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/ort.min.js"></script>
+  <script src="flutter_bootstrap.js" async></script>
+</head>
+<body>
+</body>
+</html>
 ```
 
 ## Basic Usage
@@ -25,30 +43,14 @@ import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 // Create an instance of OnnxRuntime
 final ort = OnnxRuntime();
 
-// Create a session from a model file
-final session = await ort.createSession(
-  'path/to/model.onnx',
-  options: OrtSessionOptions(
-    intraOpNumThreads: 2,
-    interOpNumThreads: 1,
-    providers: ['CPU'],
-    useArena: true,
-    deviceId: 0,
-  ),
+// Create a session from an asset file
+final session = await ort.createSessionFromAsset(
+  'assets/model.onnx',
 );
 
 // Session information
 print('Input names: ${session.inputNames}');
 print('Output names: ${session.outputNames}');
-```
-
-### Creating a Session from an Asset
-
-```dart
-// Create a session from an asset file
-final session = await ort.createSessionFromAsset(
-  'assets/model.onnx',
-);
 ```
 
 ### Getting Available Providers
@@ -193,6 +195,24 @@ for (final info in outputInfo) {
   print('  Shape: ${info['shape']}');
   print('  Type: ${info['type']}');
 }
+```
+
+### Set session options
+
+```dart
+
+final options = OrtSessionOptions(
+  intraOpNumThreads: 2,
+  interOpNumThreads: 1,
+  providers: [OrtProvider.CPU],
+  useArena: true,
+);
+
+// Create a session from a model file
+final session = await ort.createSession(
+  'path/to/model.onnx',
+  options: options,
+);
 ```
 
 ## Best Practices

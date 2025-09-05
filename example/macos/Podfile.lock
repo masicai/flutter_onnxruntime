@@ -31,11 +31,11 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
 
 SPEC CHECKSUMS:
-  flutter_onnxruntime: 546c7c7630c9259f59021319639b30bdaff148c2
-  FlutterMacOS: 8f6f14fa908a6fb3fba0cd85dbd81ec4b251fb24
+  flutter_onnxruntime: e6887abc1032d3e5c92f84b912ad42c33e9ce1c9
+  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   onnxruntime-c: ac65025f01072d25d7d394a2b43ac30d9397b260
   onnxruntime-objc: 5fa03134356d47b642ec85b1023d9907a123d201
-  path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
+  path_provider_foundation: 2b6b4c569c0fb62ec74538f866245ac84301af46
 
 PODFILE CHECKSUM: 429f567d9ab401e946f77b31dd025355fafef34e
 

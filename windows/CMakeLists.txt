@@ -42,7 +42,7 @@ if(USE_SYSTEM_ONNXRUNTIME)
     message(STATUS "Found ONNX Runtime: ${ONNXRUNTIME_LIBRARY}")
   else()
     set(ONNXRUNTIME_FOUND FALSE)
-    message(WARNING "System ONNX Runtime not found. Falling back to downloaded version.")
+    message(STATUS "System ONNX Runtime not found. Falling back to downloaded version.")
     set(USE_SYSTEM_ONNXRUNTIME OFF)
   endif()
 endif()
@@ -54,13 +54,13 @@ if(NOT USE_SYSTEM_ONNXRUNTIME)
   # Set ONNX Runtime version - make sure this is defined
   # Only set if not already defined, to allow the parent project to override it
   if(NOT DEFINED ONNXRUNTIME_VERSION)
-    set(ONNXRUNTIME_VERSION "1.21.0" CACHE STRING "ONNX Runtime version to use")
+    set(ONNXRUNTIME_VERSION "1.22.0" CACHE STRING "ONNX Runtime version to use")
   endif()
   
   # Check if version is not empty
   if("${ONNXRUNTIME_VERSION}" STREQUAL "")
-    set(ONNXRUNTIME_VERSION "1.21.0")
-    message(STATUS "ONNX Runtime version was empty, defaulting to 1.21.0")
+    set(ONNXRUNTIME_VERSION "1.22.0")
+    message(STATUS "ONNX Runtime version was empty, defaulting to 1.22.0")
   endif()
   
   # Debug output

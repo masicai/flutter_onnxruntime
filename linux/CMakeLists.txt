@@ -3,6 +3,11 @@
 # the plugin to fail to compile for some customers of the plugin.
 cmake_minimum_required(VERSION 3.28)  # required by onnxruntime-extensions
 
+# Set policy for FetchContent timestamp handling
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
 # Project-level configuration.
 set(PROJECT_NAME "flutter_onnxruntime")
 project(${PROJECT_NAME} LANGUAGES CXX)
@@ -50,6 +55,12 @@ if(DEFINED ENV{USE_ONNXRUNTIME_EXTENSIONS})
     else()
         set(USE_ONNXRUNTIME_EXTENSIONS OFF)
     endif()
+  endif()
+  
+  if(NOT ONNXRUNTIME_FOUND)
+    message(STATUS "System ONNX Runtime not found. Falling back to downloaded version.")
+    set(USE_SYSTEM_ONNXRUNTIME OFF)
+  endif()
 endif()
 
 if(DEFINED ENV{USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS})
@@ -108,11 +119,14 @@ if(USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS)
   )
   
   message(STATUS "Fetching ONNX Runtime Extensions for built-in extensions...")
-  
   # Don't use FetchContent_MakeAvailable because we need to customize the build
   FetchContent_GetProperties(onnxruntime_extensions)
   if(NOT onnxruntime_extensions_POPULATED)
     FetchContent_Populate(onnxruntime_extensions)
+  # Set ONNX Runtime version - make sure this is defined
+  # Only set if not already defined, to allow the parent project to override it
+  if(NOT DEFINED ONNXRUNTIME_VERSION)
+    set(ONNXRUNTIME_VERSION "1.22.0" CACHE STRING "ONNX Runtime version to use")
   endif()
     
   # Build ONNX Runtime with extensions
@@ -131,6 +145,11 @@ if(USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS)
     # No specific flag needed for x64 on Linux
   elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
     set(ORT_ARCH_FLAGS "--arm64")
+ 
+  # Check if version is not empty
+  if("${ONNXRUNTIME_VERSION}" STREQUAL "")
+    set(ONNXRUNTIME_VERSION "1.22.0")
+    message(STATUS "ONNX Runtime version was empty, defaulting to 1.22.0")
   endif()
   
   # Install Python dependencies first to ensure build succeeds
@@ -221,10 +240,10 @@ if(USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS)
       message(FATAL_ERROR "Could not find ONNX Runtime library in build directory. Try to rebuild or disable USE_BUILT_IN_ONNXRUNTIME_EXTENSIONS.")
     endif()
   endif()
-  
+
 else()
   # ======== DOWNLOAD PRE-BUILT ONNXRUNTIME ========
-  # Set download URL with correct naming pattern for 1.21.0
+  # Set download URL with correct naming pattern for 1.22.0
   # Make sure all parts of the version are included
   set(ONNXRUNTIME_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}.tgz")
 
@@ -442,6 +461,9 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES
   CXX_VISIBILITY_PRESET hidden)
 target_compile_definitions(${PLUGIN_NAME} PRIVATE FLUTTER_PLUGIN_IMPL)
 
+# Enable C++17 features (required for ONNX Runtime 1.22.0+)
+target_compile_features(${PLUGIN_NAME} PRIVATE cxx_std_17)
+
 # Source include directories and library dependencies. Add any plugin-specific
 # dependencies here.
 target_include_directories(${PLUGIN_NAME} PRIVATE
@@ -545,7 +567,8 @@ enable_testing()
 include(FetchContent)
 FetchContent_Declare(
   googletest
-  URL https://github.com/google/googletest/archive/release-1.11.0.zip
+  URL https://github.com/google/googletest/archive/v1.17.0.zip
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 # Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)

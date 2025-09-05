@@ -8,8 +8,14 @@
 
 Native Wrapper Flutter Plugin for ONNX Runtime
 
-*Current supported ONNX Runtime version:* **1.21.0**
+*Current supported ONNX Runtime version:* **1.22.0**
 
+| flutter_onnxruntime version | ONNX Runtime version |
+|------------------------------|----------------------|
+| < 1.5.1                        | 1.21.0               |
+| >= 1.5.1                       | 1.22.0               |
+
+*Note:* For Android build, you need to upgrade your `flutter_onnxruntime` to version `>=1.5.1` to satisfy the [16 KB Google Play compatibility requirement](https://android-developers.googleblog.com/2025/05/prepare-play-apps-for-devices-with-16kb-page-size.html).
 
 ## 🌟 Why This Project?
 
@@ -32,7 +38,7 @@ Add the following dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_onnxruntime: ^1.4.0
+  flutter_onnxruntime: ^1.5.1
 ```
 
 ### Quick Start
@@ -94,13 +100,12 @@ Clone [this repository](https://github.com/masicai/flutter-onnxruntime-examples)
 | Feature | Android | iOS | Linux | macOS | Windows | Web |
 |---------|:-------:|:---:|:-----:|:-----:|:-------:|:---: |
 | CPU Inference | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| GPU Inference | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| EP<sup>1</sup> Configuration | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Input/Output names | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Data Type Conversion | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Inference on Emulator | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Input/Output Info | ✅ | ❌* | ✅ | ❌* | ✅ | ❌* |
+| Input/Output Info | ✅ | ❌* | ✅ | ❌* | ✅ | ✅ |
 | Model Metadata | ✅ | ❌* | ✅ | ❌* | ✅ | ❌* |
-| ORT Extensions support | ✍️ | ✍️ | ✍️ | ✍️ | ✍️ | ✍️ |
 | FP16 Support | ✅ | ❌** | ✍️ | ❌** | ✍️ | ✍️ |
 
 ✅: Complete
@@ -114,6 +119,55 @@ Clone [this repository](https://github.com/masicai/flutter-onnxruntime-examples)
 `*`: Retrieving model metadata and input/output info is not available for Swift and Javascript API.
 
 `**`: Swift does not support FP16 type.
+
+<sup>1</sup>: Execution Providers (EP) are hardware accelerated inference interface for AI inference (e.g., CPU, GPU, NPU, TPU, etc.) 
+
+## 📋 Required development setup
+
+### Android
+
+Android build requires `proguard-rules.pro` inside your Android project at `android/app/` with the following content:
+  ```
+  -keep class ai.onnxruntime.** { *; }
+  ```
+or running the below command from your terminal:
+
+  ```bash
+  echo "-keep class ai.onnxruntime.** { *; }" > android/app/proguard-rules.pro
+  ```
+
+Refer to [troubleshooting.md](doc/troubleshooting.md) for more information.
+
+### iOS
+
+ONNX Runtime requires minimum version `iOS 16` and static linkage.
+
+In `ios/Podfile`, change the following lines:
+```bash
+platform :ios, '16.0'
+
+# existing code ...
+
+use_frameworks! :linkage => :static
+
+# existing code ...
+```
+
+### macOS
+
+macOS build requires minimum version `macOS 14`.
+
+* In `macos/Podfile`, change the following lines:
+  ```bash
+  platform :osx, '14.0'
+  ```
+
+* Change the "Minimum Deployments" to 14.0 in XCode. In your terminal:
+  ```bash
+  open Runner.xcworkspace
+  ```
+  In `Runner` -> `General`, change `Minimum Deployments` to `14.0`.
+
 
 ## 🛠️ Troubleshooting
 

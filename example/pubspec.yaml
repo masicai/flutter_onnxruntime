@@ -39,6 +39,7 @@ flutter:
     - assets/models/addition_model.ort
     - assets/models/transpose_and_avg_model_fp32.onnx
     - assets/models/transpose_and_avg_model_int32.onnx
+    - assets/models/transpose_and_avg_model_int64.onnx
     - assets/models/transpose_and_avg_model_fp16.onnx
     - assets/models/string_concat_model.onnx
     - assets/models/sentencepiece_tokenizer_model.onnx
