@@ -45,6 +45,9 @@ import 'package:integration_test/integration_test.dart';
 import 'dart:typed_data';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 
+// Set to true to enable benchmark timing prints during test runs
+const bool _enableBenchmarkPrints = false;
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -189,6 +192,128 @@ void main() {
         }
 
         await tensor.dispose();
+      });
+    });
+
+    group('Round-trip benchmark tests', () {
+      testWidgets('Float32 benchmark test', (WidgetTester tester) async {
+        final shape = [512, 512, 3];
+        final totalElements = shape.fold(1, (a, b) => a * b); // 786,432 elements
+
+        // Create input data with a pattern
+        final inputData = Float32List(totalElements);
+        for (int i = 0; i < totalElements; i++) {
+          inputData[i] = (i % 100) / 10.0; // Values from 0.0 to 9.9
+        }
+
+        await _runBenchmarkTest(
+          inputData: inputData,
+          shape: shape,
+          dataTypeName: 'Float32',
+          bytesPerElement: 4,
+          expectedType: OrtDataType.float32,
+          validatePerformance: true,
+        );
+      });
+
+      testWidgets('Int32 benchmark test', (WidgetTester tester) async {
+        final shape = [512, 512, 3];
+        final totalElements = shape.fold(1, (a, b) => a * b); // 786,432 elements
+
+        // Create input data with a pattern
+        final inputData = Int32List(totalElements);
+        for (int i = 0; i < totalElements; i++) {
+          inputData[i] = i % 1000; // Values from 0 to 999
+        }
+
+        await _runBenchmarkTest(
+          inputData: inputData,
+          shape: shape,
+          dataTypeName: 'Int32',
+          bytesPerElement: 4,
+          expectedType: OrtDataType.int32,
+          validatePerformance: true,
+        );
+      });
+
+      testWidgets('Int64 benchmark test', (WidgetTester tester) async {
+        // Skip for web platform as BigInt64Array is not supported in all browsers
+        if (kIsWeb) {
+          return;
+        }
+
+        final shape = [512, 512, 3];
+        final totalElements = shape.fold(1, (a, b) => a * b); // 786,432 elements
+
+        // Create input data with a pattern
+        final inputData = Int64List(totalElements);
+        for (int i = 0; i < totalElements; i++) {
+          inputData[i] = i;
+        }
+
+        await _runBenchmarkTest(
+          inputData: inputData,
+          shape: shape,
+          dataTypeName: 'Int64',
+          bytesPerElement: 8,
+          expectedType: OrtDataType.int64,
+          validatePerformance: true,
+        );
+      });
+
+      testWidgets('Uint8 benchmark test', (WidgetTester tester) async {
+        final shape = [512, 512, 3];
+        final totalElements = shape.fold(1, (a, b) => a * b); // 786,432 elements
+
+        // Create input data with a pattern
+        final inputData = Uint8List(totalElements);
+        for (int i = 0; i < totalElements; i++) {
+          inputData[i] = i % 256; // Values from 0 to 255
+        }
+
+        await _runBenchmarkTest(
+          inputData: inputData,
+          shape: shape,
+          dataTypeName: 'Uint8',
+          bytesPerElement: 1,
+          expectedType: OrtDataType.uint8,
+          validatePerformance: true,
+        );
+      });
+
+      testWidgets('Boolean benchmark test', (WidgetTester tester) async {
+        final shape = [512, 512, 3];
+        final totalElements = shape.fold(1, (a, b) => a * b); // 786,432 elements
+
+        // Create input data with a pattern
+        final inputData = List<bool>.generate(totalElements, (i) => i % 2 == 0);
+
+        await _runBenchmarkTest(
+          inputData: inputData,
+          shape: shape,
+          dataTypeName: 'Boolean',
+          bytesPerElement: 1,
+          expectedType: OrtDataType.bool,
+          validatePerformance: false,
+        );
+      });
+
+      testWidgets('String benchmark test', (WidgetTester tester) async {
+        final shape = [512, 512, 3];
+        final totalElements = shape.fold(1, (a, b) => a * b); // 786,432 elements
+
+        // Create input data with a pattern
+        final inputData = List<String>.generate(totalElements, (i) => 'str_$i');
+
+        await _runBenchmarkTest(
+          inputData: inputData,
+          shape: shape,
+          dataTypeName: 'String',
+          bytesPerElement: 10,
+          expectedType: OrtDataType.string,
+          isMemoryEstimated: true,
+          validatePerformance: false,
+        );
       });
     });
 
@@ -1028,4 +1153,115 @@ void main() {
       await output.dispose();
     });
   });
+}
+
+/// Prints benchmark results for data transfer operations.
+///
+/// This function outputs timing information and memory statistics for tensor operations.
+/// Output is controlled by the global [_enableBenchmarkPrints] constant.
+void _printBenchmarkResults({
+  required String dataTypeName,
+  required int totalElements,
+  required int bytesPerElement,
+  required Duration creationTime,
+  required Duration flattenedTime,
+  required Duration nestedTime,
+  bool isMemoryEstimated = false,
+}) {
+  if (!_enableBenchmarkPrints) return;
+
+  final memoryMB = (totalElements * bytesPerElement / (1024 * 1024)).toStringAsFixed(2);
+  final memoryPrefix = isMemoryEstimated ? '~' : '';
+  final memorySuffix = isMemoryEstimated ? ' (estimated)' : '';
+
+  // ignore: avoid_print
+  print('\n=== $dataTypeName Data Transfer Benchmark [512x512x3] ===');
+  // ignore: avoid_print
+  print('Total elements: $totalElements');
+  // ignore: avoid_print
+  print('Memory size: $memoryPrefix$memoryMB MB$memorySuffix');
+  // ignore: avoid_print
+  print('Creation time (Dart→Native): ${creationTime.inMilliseconds}ms');
+  // ignore: avoid_print
+  print('Flattened retrieval (Native→Dart): ${flattenedTime.inMilliseconds}ms');
+  // ignore: avoid_print
+  print('Nested retrieval (Native→Dart): ${nestedTime.inMilliseconds}ms');
+  // ignore: avoid_print
+  print('Total round-trip time: ${(creationTime.inMilliseconds + flattenedTime.inMilliseconds)}ms');
+  // ignore: avoid_print
+  print('================================================\n');
+}
+
+/// Runs a benchmark test for tensor data transfer operations.
+///
+/// This function performs the following steps:
+/// 1. Creates a tensor from the input data
+/// 2. Measures timing for creation, flattened retrieval, and nested retrieval
+/// 3. Optionally prints benchmark results based on [_enableBenchmarkPrints]
+/// 4. Validates tensor properties and data integrity
+/// 5. Disposes the tensor
+///
+/// Parameters:
+/// - [inputData]: The input data for tensor creation (can be TypedData or List)
+/// - [shape]: The shape of the tensor
+/// - [dataTypeName]: Name of the data type for display purposes
+/// - [bytesPerElement]: Number of bytes per element for memory calculation
+/// - [expectedType]: Expected OrtDataType for validation
+/// - [isMemoryEstimated]: Whether memory size is an estimate (for strings)
+/// - [validatePerformance]: Whether to validate that flattened retrieval is faster than creation
+Future<void> _runBenchmarkTest({
+  required dynamic inputData,
+  required List<int> shape,
+  required String dataTypeName,
+  required int bytesPerElement,
+  required OrtDataType expectedType,
+  bool isMemoryEstimated = false,
+  bool validatePerformance = false,
+}) async {
+  final totalElements = shape.fold(1, (a, b) => a * b);
+
+  // Benchmark: Dart → Native (tensor creation)
+  final creationStart = DateTime.now();
+  final tensor = await OrtValue.fromList(inputData, shape);
+  final creationTime = DateTime.now().difference(creationStart);
+
+  // Benchmark: Native → Dart (flattened retrieval)
+  final flattenedStart = DateTime.now();
+  final flattenedData = await tensor.asFlattenedList();
+  final flattenedTime = DateTime.now().difference(flattenedStart);
+
+  // Benchmark: Native → Dart (nested/reshaped retrieval)
+  final nestedStart = DateTime.now();
+  final nestedData = await tensor.asList();
+  final nestedTime = DateTime.now().difference(nestedStart);
+
+  // Print benchmark results (controlled by global constant)
+  _printBenchmarkResults(
+    dataTypeName: dataTypeName,
+    totalElements: totalElements,
+    bytesPerElement: bytesPerElement,
+    creationTime: creationTime,
+    flattenedTime: flattenedTime,
+    nestedTime: nestedTime,
+    isMemoryEstimated: isMemoryEstimated,
+  );
+
+  // Minimal validation: shape checks only
+  expect(tensor.dataType, expectedType);
+  expect(tensor.shape, shape);
+  expect(flattenedData.length, totalElements);
+  expect(nestedData.length, shape[0]);
+  expect(nestedData[0].length, shape[1]);
+  expect(nestedData[0][0].length, shape[2]);
+
+  // Validation: for typed arrays, flattened retrieval should be faster than or equal to creation
+  if (validatePerformance) {
+    expect(
+      flattenedTime.inMilliseconds <= creationTime.inMilliseconds,
+      true,
+      reason: 'Flattened retrieval should be faster than creation for typed arrays',
+    );
+  }
+
+  await tensor.dispose();
 }

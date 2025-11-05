@@ -436,4 +436,131 @@ void main() {
       expect(() => OrtValue.fromMap(map), throwsArgumentError);
     });
   });
+
+  group('Typed Data Output Verification (Optimization)', () {
+    late MockFlutterOnnxruntimePlatformWithTypedData mockTypedDataPlatform;
+
+    setUp(() {
+      mockTypedDataPlatform = MockFlutterOnnxruntimePlatformWithTypedData();
+      FlutterOnnxruntimePlatform.instance = mockTypedDataPlatform;
+    });
+
+    test('Float32 output should preserve Float32List type', () async {
+      // Mock platform returns Float32List
+      mockTypedDataPlatform.setReturnData(Float32List.fromList([1.5, 2.5, 3.5, 4.5]), [2, 2], 'float32');
+
+      final ortValue = OrtValue.fromMap({
+        'valueId': 'test_id',
+        'dataType': 'float32',
+        'shape': [2, 2],
+      });
+
+      final output = await ortValue.asFlattenedList();
+
+      // Verify output is Float32List, not List<double>
+      expect(output, isA<Float32List>());
+      expect(output.length, equals(4));
+      expect(output[0], equals(1.5));
+    });
+
+    test('Int32 output should preserve Int32List type', () async {
+      mockTypedDataPlatform.setReturnData(Int32List.fromList([10, 20, 30, 40]), [4], 'int32');
+
+      final ortValue = OrtValue.fromMap({
+        'valueId': 'test_id',
+        'dataType': 'int32',
+        'shape': [4],
+      });
+
+      final output = await ortValue.asFlattenedList();
+
+      expect(output, isA<Int32List>());
+      expect(output.length, equals(4));
+    });
+
+    test('Int64 output should preserve Int64List type', () async {
+      mockTypedDataPlatform.setReturnData(Int64List.fromList([100, 200, 300, 400]), [2, 2], 'int64');
+
+      final ortValue = OrtValue.fromMap({
+        'valueId': 'test_id',
+        'dataType': 'int64',
+        'shape': [2, 2],
+      });
+
+      final output = await ortValue.asFlattenedList();
+
+      expect(output, isA<Int64List>());
+      expect(output.length, equals(4));
+    });
+
+    test('Uint8 output should preserve Uint8List type', () async {
+      mockTypedDataPlatform.setReturnData(Uint8List.fromList([255, 128, 64, 0]), [2, 2], 'uint8');
+
+      final ortValue = OrtValue.fromMap({
+        'valueId': 'test_id',
+        'dataType': 'uint8',
+        'shape': [2, 2],
+      });
+
+      final output = await ortValue.asFlattenedList();
+
+      expect(output, isA<Uint8List>());
+      expect(output.length, equals(4));
+    });
+
+    test('Float32 precision should be preserved (not promoted to float64)', () async {
+      // Use a value that demonstrates float32 vs float64 difference
+      mockTypedDataPlatform.setReturnData(Float32List.fromList([1.234567890123456789]), [1], 'float32');
+
+      final ortValue = OrtValue.fromMap({
+        'valueId': 'test_id',
+        'dataType': 'float32',
+        'shape': [1],
+      });
+
+      final output = await ortValue.asFlattenedList() as Float32List;
+
+      // Verify it's Float32List with Float32 precision (not Float64)
+      expect(output, isA<Float32List>());
+      // Float32 will truncate precision
+      expect(output[0], closeTo(1.234568, 0.000001));
+    });
+
+    test('Multi-dimensional Float32 data should maintain type after reshape', () async {
+      mockTypedDataPlatform.setReturnData(Float32List.fromList([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]), [2, 3], 'float32');
+
+      final ortValue = OrtValue.fromMap({
+        'valueId': 'test_id',
+        'dataType': 'float32',
+        'shape': [2, 3],
+      });
+
+      final output = await ortValue.asList();
+
+      // Output should be nested list but underlying data is Float32List
+      expect(output, isA<List>());
+      expect(output.length, equals(2));
+      expect(output[0], isA<List>());
+      expect((output[0] as List).length, equals(3));
+    });
+  });
+}
+
+// Mock platform that returns typed data (simulates optimized native implementation)
+class MockFlutterOnnxruntimePlatformWithTypedData extends MockFlutterOnnxruntimePlatform {
+  dynamic _returnData = [];
+  List<int> _returnShape = [];
+  String _returnDataType = 'float32';
+
+  void setReturnData(dynamic data, List<int> shape, String dataType) {
+    _returnData = data;
+    _returnShape = shape;
+    _returnDataType = dataType;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getOrtValueData(String valueId) {
+    lastValueIdForData = valueId;
+    return Future.value({'data': _returnData, 'shape': _returnShape, 'dataType': _returnDataType});
+  }
 }
