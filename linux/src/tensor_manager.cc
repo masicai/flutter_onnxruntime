@@ -210,9 +210,8 @@ FlValue *TensorManager::getTensorData(const std::string &tensor_id) {
       // Get float data from tensor
       float *tensor_data = tensor->GetTensorMutableData<float>();
 
-      // Create data list and copy values
-      std::vector<float> data_vec(tensor_data, tensor_data + elem_count);
-      FlValue *data_list = vector_to_fl_value(data_vec);
+      // Create typed data list (Float32List)
+      FlValue *data_list = fl_value_new_float32_list(tensor_data, elem_count);
 
       // Set data in result
       fl_value_set_string_take(result, "data", data_list);
@@ -220,9 +219,8 @@ FlValue *TensorManager::getTensorData(const std::string &tensor_id) {
       // Get int32 data from tensor
       int32_t *tensor_data = tensor->GetTensorMutableData<int32_t>();
 
-      // Create data list and copy values
-      std::vector<int32_t> data_vec(tensor_data, tensor_data + elem_count);
-      FlValue *data_list = vector_to_fl_value(data_vec);
+      // Create typed data list (Int32List)
+      FlValue *data_list = fl_value_new_int32_list(tensor_data, elem_count);
 
       // Set data in result
       fl_value_set_string_take(result, "data", data_list);
@@ -230,9 +228,8 @@ FlValue *TensorManager::getTensorData(const std::string &tensor_id) {
       // Get int64 data from tensor
       int64_t *tensor_data = tensor->GetTensorMutableData<int64_t>();
 
-      // Create data list and copy values
-      std::vector<int64_t> data_vec(tensor_data, tensor_data + elem_count);
-      FlValue *data_list = vector_to_fl_value(data_vec);
+      // Create typed data list (Int64List)
+      FlValue *data_list = fl_value_new_int64_list(tensor_data, elem_count);
 
       // Set data in result
       fl_value_set_string_take(result, "data", data_list);
@@ -240,9 +237,8 @@ FlValue *TensorManager::getTensorData(const std::string &tensor_id) {
       // Get uint8 data from tensor
       uint8_t *tensor_data = tensor->GetTensorMutableData<uint8_t>();
 
-      // Create data list and copy values
-      std::vector<uint8_t> data_vec(tensor_data, tensor_data + elem_count);
-      FlValue *data_list = vector_to_fl_value(data_vec);
+      // Create typed data list (Uint8List)
+      FlValue *data_list = fl_value_new_uint8_list(tensor_data, elem_count);
 
       // Set data in result
       fl_value_set_string_take(result, "data", data_list);
