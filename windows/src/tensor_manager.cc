@@ -232,28 +232,28 @@ flutter::EncodableValue TensorManager::getTensorData(const std::string &tensor_i
       const float *tensor_data = tensor->GetTensorData<float>();
       // Create data list and copy values
       std::vector<float> data_vec(tensor_data, tensor_data + elem_count);
-      result[flutter::EncodableValue("data")] = ValueConversion::vectorToFlValue(data_vec);
+      result[flutter::EncodableValue("data")] = flutter::EncodableValue(data_vec);
     } else if (tensor_type == "int32") {
       // Get int32 data from tensor
       const int32_t *tensor_data = tensor->GetTensorData<int32_t>();
 
       // Create data list and copy values
       std::vector<int32_t> data_vec(tensor_data, tensor_data + elem_count);
-      result[flutter::EncodableValue("data")] = ValueConversion::vectorToFlValue(data_vec);
+      result[flutter::EncodableValue("data")] = flutter::EncodableValue(data_vec);
     } else if (tensor_type == "int64") {
       // Get int64 data from tensor
       const int64_t *tensor_data = tensor->GetTensorData<int64_t>();
 
       // Create data list and copy values
       std::vector<int64_t> data_vec(tensor_data, tensor_data + elem_count);
-      result[flutter::EncodableValue("data")] = ValueConversion::vectorToFlValue(data_vec);
+      result[flutter::EncodableValue("data")] = flutter::EncodableValue(data_vec);
     } else if (tensor_type == "uint8") {
       // Get uint8 data from tensor
       const uint8_t *tensor_data = tensor->GetTensorData<uint8_t>();
 
       // Create data list and copy values
       std::vector<uint8_t> data_vec(tensor_data, tensor_data + elem_count);
-      result[flutter::EncodableValue("data")] = ValueConversion::vectorToFlValue(data_vec);
+      result[flutter::EncodableValue("data")] = flutter::EncodableValue(data_vec);
     } else if (tensor_type == "bool") {
       // Get bool data from tensor
       const bool *tensor_data = tensor->GetTensorData<bool>();
