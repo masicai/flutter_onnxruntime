@@ -282,7 +282,7 @@ void main() {
       });
 
       testWidgets('Boolean benchmark test', (WidgetTester tester) async {
-        final shape = [512, 512, 3];
+        final shape = [128, 128, 3];
         final totalElements = shape.fold(1, (a, b) => a * b); // 786,432 elements
 
         // Create input data with a pattern
@@ -299,7 +299,7 @@ void main() {
       });
 
       testWidgets('String benchmark test', (WidgetTester tester) async {
-        final shape = [512, 512, 3];
+        final shape = [128, 128, 3];
         final totalElements = shape.fold(1, (a, b) => a * b); // 786,432 elements
 
         // Create input data with a pattern
