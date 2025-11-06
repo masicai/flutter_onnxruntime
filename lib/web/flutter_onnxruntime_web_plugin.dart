@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'dart:math' as math;
+import 'dart:typed_data' as typed_data;
 
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:flutter_onnxruntime/src/flutter_onnxruntime_platform_interface.dart';
@@ -846,57 +847,75 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       // Get tensor data
       final jsData = tensor.getProperty('data'.toJS) as JSObject;
       final dataLength = (jsData.getProperty('length'.toJS) as JSNumber).toDartInt;
-      final data = <dynamic>[];
 
-      // Convert data to Dart list based on type
+      // Convert data to Dart TypedData based on type
+      final dynamic data;
       switch (type.toString()) {
         case 'float32':
+          // Return Float32List to preserve float32 precision
+          final tempList = <double>[];
           for (var i = 0; i < dataLength; i++) {
             final val = jsData.getProperty(i.toString().toJS) as JSNumber;
-            data.add(val.toDartDouble);
+            tempList.add(val.toDartDouble);
           }
+          data = typed_data.Float32List.fromList(tempList);
           break;
 
         case 'int32':
+          // Return Int32List to preserve int32 type
+          final tempList = <int>[];
           for (var i = 0; i < dataLength; i++) {
             final val = jsData.getProperty(i.toString().toJS) as JSNumber;
-            data.add(val.toDartInt);
+            tempList.add(val.toDartInt);
           }
+          data = typed_data.Int32List.fromList(tempList);
           break;
 
         case 'int64':
+          // Return Int64List to preserve int64 type
           // BigInt handling
+          final tempList = <int>[];
           for (var i = 0; i < dataLength; i++) {
             final val = jsData.getProperty(i.toString().toJS) as JSNumber;
             // Convert BigInt or similar to standard number if possible
             // For dart:js_interop, try direct conversion to num or int
-            data.add(val.toDartInt);
+            tempList.add(val.toDartInt);
           }
+          data = typed_data.Int64List.fromList(tempList);
           break;
 
         case 'uint8':
+          // Return Uint8List to preserve uint8 type
+          final tempList = <int>[];
           for (var i = 0; i < dataLength; i++) {
             final val = jsData.getProperty(i.toString().toJS) as JSNumber;
-            data.add(val.toDartInt);
+            tempList.add(val.toDartInt);
           }
+          data = typed_data.Uint8List.fromList(tempList);
           break;
 
         case 'bool':
+          // Return List<dynamic> for bool (no TypedData equivalent)
+          final boolList = <dynamic>[];
           for (var i = 0; i < dataLength; i++) {
             // For boolean tensors, convert the numeric values back to proper Dart booleans
             final val = jsData.getProperty(i.toString().toJS) as JSNumber;
             // Return the actual numeric value (1 or 0), not a boolean,
             // to match native implementations which return 1/0
-            data.add(val.toDartInt != 0 ? 1 : 0);
+            boolList.add(val.toDartInt != 0 ? 1 : 0);
           }
+          data = boolList;
           break;
 
         case 'string':
+          // Return List<String> for string (no TypedData equivalent)
+          final stringList = <dynamic>[];
           for (var i = 0; i < dataLength; i++) {
             final val = jsData.getProperty(i.toString().toJS) as JSString;
             // For string tensors, extract string values
-            data.add(val.toString());
+            stringList.add(val.toString());
           }
+          data = stringList;
           break;
 
         default:

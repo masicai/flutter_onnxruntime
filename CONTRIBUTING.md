@@ -65,6 +65,10 @@ You can also manually run tests for a specific platform:
     ```
     flutter test test/unit
     ```
+    * To run unit tests for a specific platform, for example for Chrome:
+    ```
+    flutter test test/unit --platform chrome
+    ```
 2. Run integration tests:
     ```
     cd example

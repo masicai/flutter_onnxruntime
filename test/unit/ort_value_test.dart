@@ -6,6 +6,7 @@
 
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:flutter_onnxruntime/src/flutter_onnxruntime_platform_interface.dart';
@@ -176,21 +177,25 @@ void main() {
       expect(tensor.dataType, OrtDataType.int32);
     });
 
-    test('fromList with Int64List should create OrtValue correctly', () async {
-      final testData = Int64List.fromList([1, 2, 3, 4]);
-      final testShape = [2, 2];
+    test(
+      'fromList with Int64List should create OrtValue correctly',
+      () async {
+        final testData = Int64List.fromList([1, 2, 3, 4]);
+        final testShape = [2, 2];
 
-      final tensor = await OrtValue.fromList(testData, testShape);
+        final tensor = await OrtValue.fromList(testData, testShape);
 
-      // Verify correct parameter forwarding
-      expect(mockPlatform.lastSourceType, 'int64');
-      expect(mockPlatform.lastSourceData, testData);
-      expect(mockPlatform.lastShape, testShape);
+        // Verify correct parameter forwarding
+        expect(mockPlatform.lastSourceType, 'int64');
+        expect(mockPlatform.lastSourceData, testData);
+        expect(mockPlatform.lastShape, testShape);
 
-      // Verify OrtValue properties
-      expect(tensor.shape, testShape);
-      expect(tensor.dataType, OrtDataType.int64);
-    });
+        // Verify OrtValue properties
+        expect(tensor.shape, testShape);
+        expect(tensor.dataType, OrtDataType.int64);
+      },
+      skip: kIsWeb ? 'Int64List is not supported on Web platform' : null,
+    );
 
     test('fromList with Uint8List should create OrtValue correctly', () async {
       final testData = Uint8List.fromList([1, 2, 3, 4]);
@@ -256,37 +261,45 @@ void main() {
       expect(tensor.dataType, OrtDataType.float32);
     });
 
-    test('fromList with List<int> within int32 range should convert to Int32List', () async {
-      final testData = [1, 2, 3, 4];
-      final testShape = [2, 2];
+    test(
+      'fromList with List<int> within int32 range should convert to Int32List',
+      () async {
+        final testData = [1, 2, 3, 4];
+        final testShape = [2, 2];
 
-      final tensor = await OrtValue.fromList(testData, testShape);
+        final tensor = await OrtValue.fromList(testData, testShape);
 
-      // Verify correct parameter forwarding
-      expect(mockPlatform.lastSourceType, 'int32');
-      expect(mockPlatform.lastSourceData, isA<Int32List>());
-      expect(mockPlatform.lastShape, testShape);
+        // Verify correct parameter forwarding
+        expect(mockPlatform.lastSourceType, 'int32');
+        expect(mockPlatform.lastSourceData, isA<Int32List>());
+        expect(mockPlatform.lastShape, testShape);
 
-      // Verify OrtValue properties
-      expect(tensor.shape, testShape);
-      expect(tensor.dataType, OrtDataType.int32);
-    });
+        // Verify OrtValue properties
+        expect(tensor.shape, testShape);
+        expect(tensor.dataType, OrtDataType.int32);
+      },
+      skip: kIsWeb ? 'JavaScript treats all numbers as doubles on Web' : null,
+    );
 
-    test('fromList with List<int> exceeding int32 range should convert to Int64List', () async {
-      final testData = [1, 2147483648, 3, 4]; // 2147483648 exceeds int32 range
-      final testShape = [2, 2];
+    test(
+      'fromList with List<int> exceeding int32 range should convert to Int64List',
+      () async {
+        final testData = [1, 2147483648, 3, 4]; // 2147483648 exceeds int32 range
+        final testShape = [2, 2];
 
-      final tensor = await OrtValue.fromList(testData, testShape);
+        final tensor = await OrtValue.fromList(testData, testShape);
 
-      // Verify correct parameter forwarding
-      expect(mockPlatform.lastSourceType, 'int64');
-      expect(mockPlatform.lastSourceData, isA<Int64List>());
-      expect(mockPlatform.lastShape, testShape);
+        // Verify correct parameter forwarding
+        expect(mockPlatform.lastSourceType, 'int64');
+        expect(mockPlatform.lastSourceData, isA<Int64List>());
+        expect(mockPlatform.lastShape, testShape);
 
-      // Verify OrtValue properties
-      expect(tensor.shape, testShape);
-      expect(tensor.dataType, OrtDataType.int64);
-    });
+        // Verify OrtValue properties
+        expect(tensor.shape, testShape);
+        expect(tensor.dataType, OrtDataType.int64);
+      },
+      skip: kIsWeb ? 'Int64List is not supported on Web platform' : null,
+    );
 
     test('fromList with List<num> with mixed integers and decimals should convert to Float32List', () async {
       final testData = [1, 2, 3.5, 4];
@@ -491,7 +504,7 @@ void main() {
 
       expect(output, isA<Int64List>());
       expect(output.length, equals(4));
-    });
+    }, skip: kIsWeb ? 'Int64List is not supported on Web platform' : null);
 
     test('Uint8 output should preserve Uint8List type', () async {
       mockTypedDataPlatform.setReturnData(Uint8List.fromList([255, 128, 64, 0]), [2, 2], 'uint8');

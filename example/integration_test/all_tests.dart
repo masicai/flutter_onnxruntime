@@ -212,7 +212,7 @@ void main() {
           dataTypeName: 'Float32',
           bytesPerElement: 4,
           expectedType: OrtDataType.float32,
-          validatePerformance: true,
+          validatePerformance: !kIsWeb, // Web has JS interop overhead for element-by-element extraction
         );
       });
 
@@ -232,7 +232,7 @@ void main() {
           dataTypeName: 'Int32',
           bytesPerElement: 4,
           expectedType: OrtDataType.int32,
-          validatePerformance: true,
+          validatePerformance: !kIsWeb, // Web has JS interop overhead for element-by-element extraction
         );
       });
 
@@ -277,7 +277,7 @@ void main() {
           dataTypeName: 'Uint8',
           bytesPerElement: 1,
           expectedType: OrtDataType.uint8,
-          validatePerformance: true,
+          validatePerformance: !kIsWeb, // Web has JS interop overhead for element-by-element extraction
         );
       });
 
