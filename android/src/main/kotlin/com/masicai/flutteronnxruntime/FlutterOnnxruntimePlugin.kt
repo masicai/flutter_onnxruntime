@@ -1054,8 +1054,15 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                                 byteArray.map { it != 0.toByte() }
                             }
                             "string" -> {
-                                val stringArray = tensor.value as Array<String>
-                                stringArray.toList()
+                                // flatten multi-dim string array to 1D list
+                                fun flattenStringArray(arr: Any): List<String> {
+                                    return when (arr) {
+                                        is String -> listOf(arr)
+                                        is Array<*> -> arr.flatMap { flattenStringArray(it!!) }
+                                        else -> throw IllegalArgumentException("Unexpected type in string tensor: ${arr::class.java}")
+                                    }
+                                }
+                                flattenStringArray(tensor.value)
                             }
                             else -> {
                                 result.error("UNSUPPORTED_NATIVE_TYPE", "Unsupported native data type: ${tensor.info.type}", null)
