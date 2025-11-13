@@ -1,3 +1,8 @@
+## 1.6.0
+* Optimize the data transfer from native to Dart using typed arrays (#43)
+* Setup cmake-format for CMake formatting (#41)
+* Add bug report and feature request templates
+
 ## 1.5.2
 * Migrate the web plugin from `dart:js` to `dart:js_interop` (#40)
 
