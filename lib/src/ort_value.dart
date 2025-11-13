@@ -141,7 +141,8 @@ class OrtValue {
   ///
   Future<List<dynamic>> asList() async {
     final data = await FlutterOnnxruntimePlatform.instance.getOrtValueData(id);
-    final dataList1d = List<dynamic>.from(data['data']);
+    final rawData = data['data'];
+    final dataList1d = (rawData is List) ? rawData : List<dynamic>.from(rawData);
     return _reshapeList(dataList1d, shape);
   }
 
@@ -155,7 +156,8 @@ class OrtValue {
   ///
   Future<List<dynamic>> asFlattenedList() async {
     final data = await FlutterOnnxruntimePlatform.instance.getOrtValueData(id);
-    return List<dynamic>.from(data['data']);
+    final rawData = data['data'];
+    return (rawData is List) ? rawData : List<dynamic>.from(rawData);
   }
 
   /// Release native resources associated with this tensor

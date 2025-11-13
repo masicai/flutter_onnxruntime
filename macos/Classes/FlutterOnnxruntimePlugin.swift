@@ -776,41 +776,43 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
       let dataType = _getDataTypeName(from: tensorInfo.elementType)
 
       // Extract data based on the tensor's native type
+      // Return FlutterStandardTypedData instead of Array
       switch tensorInfo.elementType {
       case .float:
-        // Get float data directly
+        // Get float data as FlutterStandardTypedData(float32)
         let dataPtr = try tensor.tensorData()
-        let floatPtr = dataPtr.bytes.bindMemory(to: Float.self, capacity: elementCount)
-        let floatBuffer = UnsafeBufferPointer(start: floatPtr, count: elementCount)
-        data = Array(floatBuffer)
+        let byteCount = elementCount * MemoryLayout<Float>.stride
+        let nsData = Data(bytes: dataPtr.bytes, count: byteCount)
+        data = FlutterStandardTypedData(float32: nsData)
 
       case .int32:
-        // Get int32 data directly
+        // Get int32 data as FlutterStandardTypedData(int32)
         let dataPtr = try tensor.tensorData()
-        let intPtr = dataPtr.bytes.bindMemory(to: Int32.self, capacity: elementCount)
-        let intBuffer = UnsafeBufferPointer(start: intPtr, count: elementCount)
-        data = Array(intBuffer)
+        let byteCount = elementCount * MemoryLayout<Int32>.stride
+        let nsData = Data(bytes: dataPtr.bytes, count: byteCount)
+        data = FlutterStandardTypedData(int32: nsData)
 
       case .int64:
-        // Get int64 data directly
+        // Get int64 data as FlutterStandardTypedData(int64)
         let dataPtr = try tensor.tensorData()
-        let int64Ptr = dataPtr.bytes.bindMemory(to: Int64.self, capacity: elementCount)
-        let int64Buffer = UnsafeBufferPointer(start: int64Ptr, count: elementCount)
-        data = Array(int64Buffer)
+        let byteCount = elementCount * MemoryLayout<Int64>.stride
+        let nsData = Data(bytes: dataPtr.bytes, count: byteCount)
+        data = FlutterStandardTypedData(int64: nsData)
 
       case .uInt8:
-        // Get uint8 data directly
+        // Get uint8 data as FlutterStandardTypedData(bytes)
         let dataPtr = try tensor.tensorData()
-        let uint8Ptr = dataPtr.bytes.bindMemory(to: UInt8.self, capacity: elementCount)
-        let uint8Buffer = UnsafeBufferPointer(start: uint8Ptr, count: elementCount)
-        data = Array(uint8Buffer)
+        let byteCount = elementCount * MemoryLayout<UInt8>.stride
+        let nsData = Data(bytes: dataPtr.bytes, count: byteCount)
+        data = FlutterStandardTypedData(bytes: nsData)
 
       case .int8:
-        // Get int8 data directly
+        // Get int8 data as FlutterStandardTypedData(bytes)
+        // Note: Using bytes for int8 as it's compatible with Int8List in Dart
         let dataPtr = try tensor.tensorData()
-        let int8Ptr = dataPtr.bytes.bindMemory(to: Int8.self, capacity: elementCount)
-        let int8Buffer = UnsafeBufferPointer(start: int8Ptr, count: elementCount)
-        data = Array(int8Buffer)
+        let byteCount = elementCount * MemoryLayout<Int8>.stride
+        let nsData = Data(bytes: dataPtr.bytes, count: byteCount)
+        data = FlutterStandardTypedData(bytes: nsData)
 
       case .string:
         // For string tensors, we need to use the special string tensor API
@@ -825,9 +827,9 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
       default:
         // Try to extract as float for unsupported types
         let dataPtr = try tensor.tensorData()
-        let floatPtr = dataPtr.bytes.bindMemory(to: Float.self, capacity: elementCount)
-        let floatBuffer = UnsafeBufferPointer(start: floatPtr, count: elementCount)
-        data = Array(floatBuffer)
+        let byteCount = elementCount * MemoryLayout<Float>.stride
+        let nsData = Data(bytes: dataPtr.bytes, count: byteCount)
+        data = FlutterStandardTypedData(float32: nsData)
       }
 
       // Return data with shape and dataType

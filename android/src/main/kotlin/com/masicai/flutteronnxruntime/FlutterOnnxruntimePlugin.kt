@@ -1020,7 +1020,7 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                             "float32" -> {
                                 val floatArray = FloatArray(flatSize)
                                 tensor.floatBuffer.get(floatArray)
-                                floatArray.toList()
+                                floatArray
                             }
                             "float16" -> {
                                 // For float16, convert to float32 for easier use in Dart
@@ -1031,12 +1031,12 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                             "int32" -> {
                                 val intArray = IntArray(flatSize)
                                 tensor.intBuffer.get(intArray)
-                                intArray.toList()
+                                intArray
                             }
                             "int64" -> {
                                 val longArray = LongArray(flatSize)
                                 tensor.longBuffer.get(longArray)
-                                longArray.toList()
+                                longArray
                             }
                             "int16", "uint16" -> {
                                 val shortArray = ShortArray(flatSize)
@@ -1046,7 +1046,7 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                             "int8", "uint8" -> {
                                 val byteArray = ByteArray(flatSize)
                                 tensor.byteBuffer.get(byteArray)
-                                byteArray.map { it.toInt() and 0xFF }
+                                byteArray
                             }
                             "bool" -> {
                                 val byteArray = ByteArray(flatSize)
@@ -1054,8 +1054,15 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                                 byteArray.map { it != 0.toByte() }
                             }
                             "string" -> {
-                                val stringArray = tensor.value as Array<String>
-                                stringArray.toList()
+                                // flatten multi-dim string array to 1D list
+                                fun flattenStringArray(arr: Any): List<String> {
+                                    return when (arr) {
+                                        is String -> listOf(arr)
+                                        is Array<*> -> arr.flatMap { flattenStringArray(it!!) }
+                                        else -> throw IllegalArgumentException("Unexpected type in string tensor: ${arr::class.java}")
+                                    }
+                                }
+                                flattenStringArray(tensor.value)
                             }
                             else -> {
                                 result.error("UNSUPPORTED_NATIVE_TYPE", "Unsupported native data type: ${tensor.info.type}", null)
