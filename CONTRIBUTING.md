@@ -111,5 +111,14 @@ To run integration tests on web, we need to have a web driver running. We will u
 3. Make your changes and test on multiple platforms if possible
 4. Submit a pull request with a clear description of your changes
 
+### Release a new version
+* Update a new version at `pubspec.yaml` and changes in `CHANGELOG.md`
+* Commit all changes in local
+* Dry run the publish and review the publish information carefully: `dart pub publish --dry-run`
+* If the dry run succeeds, run the following command to publish: `dart pub publish`
+* Tag the new release: `git tag -a v1.4.2 -m "version 1.4.2"`
+* Push the tag to remote: `git push --tags`
+* Create a new release in Github
+
 ## Debug Tips
 * Log printing does not work when debugging for C++/Linux. We could use early return of `FL_METHOD_RESPONSE()` to locate the error.
