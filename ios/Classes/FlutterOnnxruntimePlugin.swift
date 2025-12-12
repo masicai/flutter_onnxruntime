@@ -22,6 +22,33 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
     let channel = FlutterMethodChannel(name: "flutter_onnxruntime", binaryMessenger: registrar.messenger())
     let instance = FlutterOnnxruntimePlugin()
     registrar.addMethodCallDelegate(instance, channel: channel)
+
+    // Register for app termination to cleanup before static destruction
+    NotificationCenter.default.addObserver(
+      instance,
+      selector: #selector(handleAppWillTerminate(_:)),
+      name: UIApplication.willTerminateNotification,
+      object: nil
+    )
+  }
+
+  deinit {
+    cleanupResources()
+  }
+
+  @objc private func handleAppWillTerminate(_ notification: Notification) {
+    cleanupResources()
+  }
+
+  private func cleanupResources() {
+    // Clear all OrtValues first (they may depend on sessions/env)
+    ortValues.removeAll()
+
+    // Clear all sessions (they depend on env)
+    sessions.removeAll()
+
+    // Release the environment
+    env = nil
   }
 
   // swiftlint:disable:next cyclomatic_complexity
