@@ -1,3 +1,6 @@
+## 1.6.1
+* Explicit cleanup for ONNX Runtime resources when applications close in macOS and iOS (#45)
+
 ## 1.6.0
 * Optimize the data transfer from native to Dart using typed arrays (#43)
 * Setup cmake-format for CMake formatting (#41)
