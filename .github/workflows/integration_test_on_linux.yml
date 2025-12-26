@@ -11,6 +11,7 @@ on:
       - 'linux/**/*.cpp'
       - 'linux/**/*.hpp'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [ main, master ]
     paths:
       - 'lib/src/**'
