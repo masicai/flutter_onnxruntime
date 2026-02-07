@@ -75,10 +75,7 @@ You can also manually run tests for a specific platform:
 2. Run integration tests:
     ```
     cd example
-    flutter test integration_test/ -d <device_id>
-
-    # on Windows
-    flutter test .\integration_test\all_tests.dart -d windows
+    flutter test integration_test/all_tests.dart -d <device_id>
     ```
     or running via flutter drive:
     ```
