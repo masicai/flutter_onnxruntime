@@ -358,6 +358,8 @@ std::vector<int64_t> TensorManager::getTensorShape(const std::string &tensor_id)
 
 std::string TensorManager::convertTensor(const std::string &tensor_id, const std::string &target_type) {
 
+  std::lock_guard<std::mutex> lock(mutex_);
+
   // Check if the tensor exists
   auto tensor_it = tensors_.find(tensor_id);
   auto type_it = tensor_types_.find(tensor_id);
@@ -372,7 +374,7 @@ std::string TensorManager::convertTensor(const std::string &tensor_id, const std
   if (source_type == target_type) {
 
     // Clone the tensor (returns ClonedTensor with managed buffer)
-    auto cloned = cloneTensor(tensor_id);
+    auto cloned = cloneTensorLocked(tensor_id);
     // Create a new tensor ID
     std::string new_tensor_id = generateTensorId();
     tensors_[new_tensor_id] = std::make_unique<Ort::Value>(std::move(cloned.value));
@@ -390,7 +392,6 @@ std::string TensorManager::convertTensor(const std::string &tensor_id, const std
     return new_tensor_id;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
   // Convert based on the source type
   if (source_type == "float32") {
     return convertFloat32To(tensor_id, target_type);
@@ -740,6 +741,10 @@ std::string TensorManager::convertBoolTo(const std::string &tensor_id, const std
 ClonedTensor TensorManager::cloneTensor(const std::string &tensor_id) {
   std::lock_guard<std::mutex> lock(mutex_);
 
+  return cloneTensorLocked(tensor_id);
+}
+
+ClonedTensor TensorManager::cloneTensorLocked(const std::string &tensor_id) {
   // Find the tensor
   auto tensor_it = tensors_.find(tensor_id);
   auto type_it = tensor_types_.find(tensor_id);
