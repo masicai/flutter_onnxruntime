@@ -98,6 +98,8 @@ public:
   ClonedTensor cloneTensor(const std::string &tensor_id);
 
 private:
+  ClonedTensor cloneTensorLocked(const std::string &tensor_id);
+
   // Map of tensor IDs to OrtValue objects
   std::map<std::string, std::unique_ptr<Ort::Value>> tensors_;
 
