@@ -816,7 +816,8 @@ ClonedTensor TensorManager::cloneTensor(const std::string &tensor_id) {
     std::memcpy(buffer.data(), data, element_count * sizeof(uint8_t));
 
     ClonedTensor result;
-    result.value = Ort::Value::CreateTensor<uint8_t>(memory_info_, buffer.data(), element_count, shape.data(), shape.size());
+    result.value =
+        Ort::Value::CreateTensor<uint8_t>(memory_info_, buffer.data(), element_count, shape.data(), shape.size());
     result.buffer = std::move(buffer);
     return result;
   } else if (tensor_type == "bool") {

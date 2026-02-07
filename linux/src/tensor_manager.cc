@@ -103,7 +103,8 @@ std::string TensorManager::createUint8Tensor(const std::vector<uint8_t> &data, c
     std::vector<uint8_t> buffer(data.size() * sizeof(uint8_t));
     std::memcpy(buffer.data(), data.data(), data.size() * sizeof(uint8_t));
     // Create a new tensor with the buffer-backed data
-    auto tensor = Ort::Value::CreateTensor<uint8_t>(memory_info_, buffer.data(), data.size(), shape.data(), shape.size());
+    auto tensor =
+        Ort::Value::CreateTensor<uint8_t>(memory_info_, buffer.data(), data.size(), shape.data(), shape.size());
     // Store the tensor, its type, shape, and backing buffer
     tensors_[tensor_id] = std::make_unique<Ort::Value>(std::move(tensor));
     tensor_data_buffers_[tensor_id] = std::move(buffer);
@@ -793,7 +794,8 @@ ClonedTensor TensorManager::cloneTensor(const std::string &tensor_id) {
     std::memcpy(buffer.data(), data, element_count * sizeof(uint8_t));
 
     ClonedTensor result;
-    result.value = Ort::Value::CreateTensor<uint8_t>(memory_info_, buffer.data(), element_count, shape.data(), shape.size());
+    result.value =
+        Ort::Value::CreateTensor<uint8_t>(memory_info_, buffer.data(), element_count, shape.data(), shape.size());
     result.buffer = std::move(buffer);
     return result;
   } else if (tensor_type == "bool") {
