@@ -383,7 +383,8 @@ static FlMethodResponse *run_inference(FlutterOnnxruntimePlugin *self, FlValue *
     std::vector<std::string> output_names = self->session_manager->getOutputNames(session_id);
 
     // Prepare input tensors and input names
-    std::vector<Ort::Value> input_tensors;
+    // Use ClonedTensor to keep backing buffers alive during inference
+    std::vector<ClonedTensor> cloned_inputs;
     std::vector<std::string> input_names;
 
     // Iterate through each input
@@ -411,15 +412,22 @@ static FlMethodResponse *run_inference(FlutterOnnxruntimePlugin *self, FlValue *
       Ort::Value *tensor_ptr = self->tensor_manager->getTensor(tensor_id);
       if (tensor_ptr != nullptr) {
         try {
-          // Use the tensor manager to clone the tensor
-          Ort::Value new_tensor = self->tensor_manager->cloneTensor(tensor_id);
-          input_tensors.push_back(std::move(new_tensor));
+          // Clone the tensor — ClonedTensor owns both the Ort::Value and its backing buffer
+          ClonedTensor cloned = self->tensor_manager->cloneTensor(tensor_id);
+          cloned_inputs.push_back(std::move(cloned));
           input_names.push_back(input_name);
         } catch (const std::exception &e) {
           g_warning("Failed to clone tensor %s: %s", tensor_id.c_str(), e.what());
           // Continue with the next tensor
         }
       }
+    }
+
+    // Build a vector of Ort::Value references for Session::Run
+    std::vector<Ort::Value> input_tensors;
+    input_tensors.reserve(cloned_inputs.size());
+    for (auto &ci : cloned_inputs) {
+      input_tensors.push_back(std::move(ci.value));
     }
 
     // Create and configure run options
@@ -448,7 +456,8 @@ static FlMethodResponse *run_inference(FlutterOnnxruntimePlugin *self, FlValue *
       }
     }
 
-    // Run inference using SessionManager with user-provided input names
+    // Run inference using SessionManager with input names
+    // Note: cloned_inputs (with backing buffers) stays alive through this scope
     std::vector<Ort::Value> output_tensors;
     if (!input_tensors.empty()) {
       output_tensors = self->session_manager->runInference(session_id, input_tensors, input_names, &run_options);

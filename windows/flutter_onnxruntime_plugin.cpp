@@ -697,7 +697,8 @@ void FlutterOnnxruntimePlugin::HandleRunInference(
     std::vector<std::string> output_names = impl_->sessionManager_->getOutputNames(session_id);
 
     // Prepare input tensors and input names
-    std::vector<Ort::Value> input_tensors;
+    // Use ClonedTensor to keep backing buffers alive during inference
+    std::vector<ClonedTensor> cloned_inputs;
     std::vector<std::string> input_names;
 
     // Iterate through each input
@@ -723,10 +724,10 @@ void FlutterOnnxruntimePlugin::HandleRunInference(
       Ort::Value *tensor_ptr = impl_->tensorManager_->getTensor(tensor_id);
       if (tensor_ptr != nullptr) {
         try {
-          // Clone the tensor and move it into the input_tensors vector
-          Ort::Value cloned_tensor = impl_->tensorManager_->cloneTensor(tensor_id);
-          if (cloned_tensor) {
-            input_tensors.push_back(std::move(cloned_tensor));
+          // Clone the tensor — ClonedTensor owns both the Ort::Value and its backing buffer
+          ClonedTensor cloned = impl_->tensorManager_->cloneTensor(tensor_id);
+          if (cloned.value) {
+            cloned_inputs.push_back(std::move(cloned));
             input_names.push_back(input_name);
           }
         } catch (const std::exception &e) {
@@ -736,7 +737,15 @@ void FlutterOnnxruntimePlugin::HandleRunInference(
       }
     }
 
+    // Build a vector of Ort::Value references for Session::Run
+    std::vector<Ort::Value> input_tensors;
+    input_tensors.reserve(cloned_inputs.size());
+    for (auto &ci : cloned_inputs) {
+      input_tensors.push_back(std::move(ci.value));
+    }
+
     // Run inference using SessionManager with input names
+    // Note: cloned_inputs (with backing buffers) stays alive through this scope
     std::vector<Ort::Value> output_tensors;
     if (!input_tensors.empty()) {
       output_tensors = impl_->sessionManager_->runInference(session_id, input_tensors, input_names, &run_options);

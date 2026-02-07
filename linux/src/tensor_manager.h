@@ -18,6 +18,15 @@
 // Forward declare SessionManager
 class SessionManager;
 
+// Holds a cloned Ort::Value together with its backing data buffer.
+// When this struct goes out of scope, both the tensor and its memory are freed.
+// Field order matters: buffer is declared first so that value (declared second)
+// is destroyed first, ensuring the Ort::Value is released before its backing memory.
+struct ClonedTensor {
+  std::vector<uint8_t> buffer;
+  Ort::Value value{nullptr};
+};
+
 // Class to manage tensor data
 class TensorManager {
 public:
@@ -85,8 +94,8 @@ public:
   // Generate a unique tensor ID
   std::string generateTensorId();
 
-  // Clone a tensor and return a new deep copy of it
-  Ort::Value cloneTensor(const std::string &tensor_id);
+  // Clone a tensor, returning both the Ort::Value and its backing buffer
+  ClonedTensor cloneTensor(const std::string &tensor_id);
 
 private:
   // Map of tensor IDs to OrtValue objects
@@ -97,6 +106,9 @@ private:
 
   // Map of tensor IDs to their shapes
   std::map<std::string, std::vector<int64_t>> tensor_shapes_;
+
+  // Memory for tensor data that needs to persist
+  std::map<std::string, std::vector<uint8_t>> tensor_data_buffers_;
 
   // Counter for generating unique tensor IDs
   int next_tensor_id_;
