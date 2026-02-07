@@ -31,6 +31,9 @@ We use a pre-commit hook to ensure code quality and consistency. Follow these st
      
      # macOS
      brew install clang-format
+
+     # Windows
+     winget install -e --id LLVM.ClangFormat
      ```
    - **cmake-format** (for CMake formatting):
      ```
@@ -73,6 +76,9 @@ You can also manually run tests for a specific platform:
     ```
     cd example
     flutter test integration_test/ -d <device_id>
+
+    # on Windows
+    flutter test .\integration_test\all_tests.dart -d windows
     ```
     or running via flutter drive:
     ```
