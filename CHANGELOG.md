@@ -1,3 +1,7 @@
+## 1.6.2
+* Fix a memory leak issue for tensor creation in Linux and Windows
+* Fix thread safe issue for tensor operations in Linux and Windows
+
 ## 1.6.1
 * Explicit cleanup for ONNX Runtime resources when applications close in macOS and iOS (#45)
 
