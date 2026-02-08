@@ -120,6 +120,7 @@ To run integration tests on web, we need to have a web driver running. We will u
 * Dry run the publish and review the publish information carefully: `dart pub publish --dry-run`
 * If the dry run succeeds, run the following command to publish: `dart pub publish`
 * Tag the new release: `git tag -a v1.4.2 -m "version 1.4.2"`
+* Push changes to remote: `git push`
 * Push the tag to remote: `git push --tags`
 * Create a new release in Github
 
