@@ -27,6 +27,9 @@ A new Flutter plugin project.
   s.dependency 'onnxruntime-objc', '1.21.0'
 
   s.platform = :osx, '14.0'
-  s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
+  s.pod_target_xcconfig = {
+    'DEFINES_MODULE' => 'YES',
+    'HEADER_SEARCH_PATHS' => '"${PODS_ROOT}/onnxruntime-objc/objectivec" "${PODS_ROOT}/onnxruntime-objc/objectivec/include"'
+  }
   s.swift_version = '5.0'
 end

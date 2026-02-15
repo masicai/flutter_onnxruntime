@@ -1065,8 +1065,8 @@ void main() {
       testWidgets('FP16 model inference test', (WidgetTester tester) async {
         final tensorA = await OrtValue.fromList([1.0, 1.0, 1.0, 1.0, 1.0, 1.0], [1, 2, 3]);
         final tensorB = await OrtValue.fromList([2.0, 2.0, 2.0, 2.0, 2.0, 2.0], [1, 3, 2]);
-        // only support Android
-        if (!kIsWeb && Platform.isAndroid) {
+        // supported on Android, iOS, and macOS
+        if (!kIsWeb && (Platform.isAndroid || Platform.isIOS || Platform.isMacOS)) {
           // convert to fp16
           final tensorAFp16 = await tensorA.to(OrtDataType.float16);
           final tensorBFp16 = await tensorB.to(OrtDataType.float16);
