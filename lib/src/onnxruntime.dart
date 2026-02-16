@@ -50,6 +50,8 @@ class OnnxRuntime {
       // Check if the model already exists
       final file = File(filePath);
       if (!await file.exists()) {
+        // Ensure the directory exists
+        await Directory(directory.path).create(recursive: true);
         // Extract asset to file
         final data = await rootBundle.load(assetKey);
         await file.writeAsBytes(data.buffer.asUint8List());
