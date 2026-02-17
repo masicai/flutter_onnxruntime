@@ -1,3 +1,7 @@
+## 1.6.3
+* Add float16 tensor support for iOS and macOS
+* Upgrade `onnxruntime-objc` for macOS to 1.22.0
+
 ## 1.6.2
 * Fix a memory leak issue for tensor creation in Linux and Windows
 * Fix thread safe issue for tensor operations in Linux and Windows

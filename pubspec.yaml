@@ -1,6 +1,6 @@
 name: flutter_onnxruntime
 description: "A lightweight plugin that provides native wrappers for running ONNX Runtime on multiple platforms"
-version: 1.6.2
+version: 1.6.3
 homepage: https://github.com/masicai/flutter_onnxruntime
 repository: https://github.com/masicai/flutter_onnxruntime
 
