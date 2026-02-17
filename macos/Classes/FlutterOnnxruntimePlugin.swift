@@ -285,12 +285,19 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
       for (outputName, outputTensor) in outputs {
         let valueId = UUID().uuidString
         ortValues[valueId] = outputTensor
-        let tensorInfo = try outputTensor.tensorTypeAndShapeInfo()
-        // set an array of [valueId, dataType, shape]
-        let shape = tensorInfo.shape.map { Int(truncating: $0) }
-        // get the element type as string
-        let typeName = _getDataTypeName(from: tensorInfo.elementType)
-        flutterOutputs[outputName] = [valueId, typeName, shape]
+
+        // Check if output is float16 (ObjC enum doesn't support it, use C++ API)
+        if Float16Helper.isFloat16Tensor(outputTensor) {
+          let shapeArr = try Float16Helper.getTensorShape(outputTensor)
+          let shape = shapeArr.map { Int(truncating: $0) }
+          let typeName = Float16Helper.getElementTypeName(outputTensor)
+          flutterOutputs[outputName] = [valueId, typeName, shape]
+        } else {
+          let tensorInfo = try outputTensor.tensorTypeAndShapeInfo()
+          let shape = tensorInfo.shape.map { Int(truncating: $0) }
+          let typeName = _getDataTypeName(from: tensorInfo.elementType)
+          flutterOutputs[outputName] = [valueId, typeName, shape]
+        }
       }
       // Return result
       result(flutterOutputs)
@@ -582,6 +589,57 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
           return
         }
 
+      case "float16":
+        // Float16 tensors: accept float32 data and convert to float16 via C++ API
+        var float32Numbers: [NSNumber] = []
+        if let doubleArray = data as? [Double] {
+          float32Numbers = doubleArray.map { NSNumber(value: Float($0)) }
+        } else if let floatArray = data as? [Float] {
+          float32Numbers = floatArray.map { NSNumber(value: $0) }
+        } else if let anyArray = data as? [Any] {
+          float32Numbers = try anyArray.map { value -> NSNumber in
+            if let number = value as? NSNumber {
+              return NSNumber(value: number.floatValue)
+            } else {
+              throw OrtError.flutterError(FlutterError(code: "CONVERSION_ERROR",
+                message: "Cannot convert \(type(of: value)) to Float", details: nil))
+            }
+          }
+        } else if let typedData = data as? FlutterStandardTypedData {
+          if typedData.data.count % 4 == 0 {
+            let float32Count = typedData.data.count / 4
+            float32Numbers = [NSNumber](repeating: NSNumber(value: 0), count: float32Count)
+            typedData.data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) in
+              let floatBuffer = buffer.bindMemory(to: Float.self)
+              for index in 0..<float32Count {
+                float32Numbers[index] = NSNumber(value: floatBuffer[index])
+              }
+            }
+          } else if typedData.data.count % 8 == 0 {
+            let float64Count = typedData.data.count / 8
+            float32Numbers = [NSNumber](repeating: NSNumber(value: 0), count: float64Count)
+            typedData.data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) in
+              let float64Buffer = buffer.bindMemory(to: Float64.self)
+              for index in 0..<float64Count {
+                float32Numbers[index] = NSNumber(value: Float(float64Buffer[index]))
+              }
+            }
+          } else {
+            result(FlutterError(code: "INVALID_DATA_TYPE",
+                               message: "Data size \(typedData.data.count) is not consistent with Float32 or Float64 data",
+                               details: nil))
+            return
+          }
+        } else {
+          result(FlutterError(code: "INVALID_DATA",
+                             message: "Data must be a list of numbers for float16 type. Received: \(type(of: data))",
+                             details: nil))
+          return
+        }
+
+        tensor = try Float16Helper.createFloat16Tensor(fromFloat32: float32Numbers,
+                                                        shape: shapeNumbers)
+
       default:
         result(FlutterError(code: "UNSUPPORTED_TYPE", message: "Unsupported source data type: \(sourceType)", details: nil))
         return
@@ -619,11 +677,24 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
     }
 
     do {
-      // Get tensor information
-      let tensorInfo = try tensor.tensorTypeAndShapeInfo()
-      let shape = tensorInfo.shape.map { Int(truncating: $0) }
-      let elementCount = shape.reduce(1, *)
-      let sourceType = _getDataTypeName(from: tensorInfo.elementType)
+      // Check if source is float16 (must use C++ API since ObjC enum doesn't support it)
+      let isSourceFloat16 = Float16Helper.isFloat16Tensor(tensor)
+
+      var shape: [Int]
+      var elementCount: Int
+      var sourceType: String
+
+      if isSourceFloat16 {
+        let shapeArr = try Float16Helper.getTensorShape(tensor)
+        shape = shapeArr.map { $0.intValue }
+        elementCount = shape.reduce(1, *)
+        sourceType = "float16"
+      } else {
+        let tensorInfo = try tensor.tensorTypeAndShapeInfo()
+        shape = tensorInfo.shape.map { Int(truncating: $0) }
+        elementCount = shape.reduce(1, *)
+        sourceType = _getDataTypeName(from: tensorInfo.elementType)
+      }
 
       // If source and target types are the same, just clone the tensor
       if sourceType == targetType {
@@ -645,7 +716,53 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
       // Create a new tensor with converted data
       var newTensor: ORTValue
 
-      // Extract original data
+      // Handle float16 conversions via C++ helper (before extracting data via ObjC API)
+      if sourceType == "float16" && targetType == "float32" {
+        // Float16 -> Float32: extract float16 data as float32 via helper
+        let float32Values = try Float16Helper.extractFloat16(asFloat32: tensor)
+        let floatArray = float32Values.map { $0.floatValue }
+        let newData = NSMutableData(bytes: floatArray, length: floatArray.count * MemoryLayout<Float>.stride)
+        newTensor = try ORTValue(tensorData: newData, elementType: .float, shape: shape.map { NSNumber(value: $0) })
+
+        let newValueId = UUID().uuidString
+        ortValues[newValueId] = newTensor
+        result(["valueId": newValueId, "dataType": targetType, "shape": shape] as [String: Any])
+        return
+      }
+
+      if sourceType == "float32" && targetType == "float16" {
+        // Float32 -> Float16: extract float32 data, create float16 tensor via helper
+        let sourceDataPtr = try tensor.tensorData()
+        let floatPtr = sourceDataPtr.bytes.bindMemory(to: Float.self, capacity: elementCount)
+        let floatBuffer = UnsafeBufferPointer(start: floatPtr, count: elementCount)
+        let float32Numbers = floatBuffer.map { NSNumber(value: $0) }
+
+        let fp16Tensor = try Float16Helper.createFloat16Tensor(fromFloat32: float32Numbers,
+                                                               shape: shape.map { NSNumber(value: $0) })
+
+        let newValueId = UUID().uuidString
+        ortValues[newValueId] = fp16Tensor
+        result(["valueId": newValueId, "dataType": targetType, "shape": shape] as [String: Any])
+        return
+      }
+
+      if isSourceFloat16 {
+        // Float16 source with non-float32 target: not supported
+        result(FlutterError(code: "CONVERSION_ERROR",
+                           message: "Conversion from float16 to \(targetType) is not supported",
+                           details: nil))
+        return
+      }
+
+      if targetType == "float16" {
+        // Non-float32 source to float16: not supported
+        result(FlutterError(code: "CONVERSION_ERROR",
+                           message: "Conversion from \(sourceType) to float16 is not supported",
+                           details: nil))
+        return
+      }
+
+      // Extract original data (safe for non-float16 tensors)
       let sourceDataPtr = try tensor.tensorData()
 
       // Convert data based on source type and target type
@@ -782,6 +899,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
     }
   }
 
+  // swiftlint:disable:next cyclomatic_complexity
   private func handleGetOrtValueData(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard let args = call.arguments as? [String: Any],
           let valueId = args["valueId"] as? String else {
@@ -795,6 +913,27 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
     }
 
     do {
+      // Check for float16 tensor first (ObjC API doesn't support it)
+      if Float16Helper.isFloat16Tensor(tensor) {
+        let shapeArr = try Float16Helper.getTensorShape(tensor)
+        let shape = shapeArr.map { $0.intValue }
+
+        let float32Values = try Float16Helper.extractFloat16(asFloat32: tensor)
+
+        // Convert to FlutterStandardTypedData(float32:) for efficient transfer
+        let floatArray = float32Values.map { $0.floatValue }
+        let nsData = Data(bytes: floatArray, count: floatArray.count * MemoryLayout<Float>.stride)
+        let data = FlutterStandardTypedData(float32: nsData)
+
+        let resultMap: [String: Any] = [
+          "data": data,
+          "shape": shape,
+          "dataType": "float16"
+        ]
+        result(resultMap)
+        return
+      }
+
       // Get tensor information
       let tensorInfo = try tensor.tensorTypeAndShapeInfo()
       let shape = tensorInfo.shape.map { Int(truncating: $0) }
