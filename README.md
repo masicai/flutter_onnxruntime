@@ -101,7 +101,7 @@ Clone [this repository](https://github.com/masicai/flutter-onnxruntime-examples)
 | Inference on Emulator | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Input/Output Info | ✅ | ❌* | ✅ | ❌* | ✅ | ✅ |
 | Model Metadata | ✅ | ❌* | ✅ | ❌* | ✅ | ❌* |
-| FP16 Support | ✅ | ❌** | ✍️ | ❌** | ✍️ | ✍️ |
+| FP16 Support | ✅ | ✅ | ✍️ | ✅ | ✍️ | ✍️ |
 
 ✅: Completed
 
@@ -112,8 +112,6 @@ Clone [this repository](https://github.com/masicai/flutter-onnxruntime-examples)
 ✍️: Planned
 
 `*`: Retrieving model metadata and input/output info is not available for Swift and Javascript API.
-
-`**`: Swift does not support FP16 type.
 
 <sup>1</sup>: Execution Providers (EP) are hardware accelerated inference interface for AI inference (e.g., CPU, GPU, NPU, TPU, etc.) 
 
