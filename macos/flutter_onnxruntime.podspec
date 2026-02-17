@@ -24,7 +24,7 @@ A new Flutter plugin project.
 
   s.dependency 'FlutterMacOS'
   # Add ONNX Runtime dependency for macOS
-  s.dependency 'onnxruntime-objc', '1.21.0'
+  s.dependency 'onnxruntime-objc', '1.22.0'
 
   s.platform = :osx, '14.0'
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
