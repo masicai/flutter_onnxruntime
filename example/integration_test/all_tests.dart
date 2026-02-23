@@ -8,7 +8,7 @@
 //
 // All integration tests are grouped into a single file due to an issue in Linux and macOS reported at:
 // https://github.com/flutter/flutter/issues/135673
-// Three models used in this Test: Addition model, Transpose-Avg Model and String Concat Model
+// 4 models used in this Test: Addition model, Transpose-Avg Model, String Concat Model and SentencePiece Tokenizer Model
 //
 // 1. The Addition Model is a simple model which perform Add operation between two tensor A and B, results in C
 //
@@ -34,6 +34,17 @@
 // * FP16: model is fp16
 //
 // 3. The String Concat model is a similar version of Addition model but with string inputs and outputs
+//
+// 4. The SentencePiece Tokenizer model is a dummy model that tokenizes a text into a list of tokens using SentencePiece.
+// Example Input Format:
+// inputs: A 1D tensor of strings (e.g., np.array(["Hello world", "Hello world louder"], dtype=object))
+
+// Example Output Formats (Standard for SentencepieceTokenizer op):
+// indices: A 1D tensor of int64 representing the starting indices of each input string's tokens in the 'output' tensor.
+//          Example for inputs ["Hello world", "Hello world louder"] might be: np.array([0, 2, 6], dtype=np.int64)
+// output: A 1D tensor of int32 representing the token IDs for all input strings concatenated.
+//         Example for inputs ["Hello world", "Hello world louder"] might be: np.array([17486, 1017, 17486, 1017, 155, 21869], dtype=np.int32)
+//
 //
 
 import 'dart:io';
@@ -1151,6 +1162,59 @@ void main() {
         input.dispose();
       }
       await output.dispose();
+    });
+  });
+
+  group('SentencePiece Tokenizer Model Test', () {
+    late OnnxRuntime onnxRuntime;
+    late String modelPath;
+
+    setUpAll(() async {
+      onnxRuntime = OnnxRuntime();
+      modelPath = 'assets/models/sentencepiece_tokenizer_model.onnx';
+    });
+
+    tearDownAll(() async {});
+
+    testWidgets('SentencePiece inference test', (WidgetTester tester) async {
+      // only support Android for now
+      // Note: For Linux and Windows, this test requires building from source with USE_ONNXRUNTIME_EXTENSIONS=ON
+      // so that we have to check if the environment variable is set with:
+      // final useExtensions = Platform.environment['USE_ONNXRUNTIME_EXTENSIONS'];
+      // if (useExtensions == 'ON') ...
+      if (!kIsWeb && Platform.isAndroid) {
+        final sessionOptions = OrtSessionOptions(enableOrtCustomOps: true);
+        final session = await onnxRuntime.createSessionFromAsset(modelPath, options: sessionOptions);
+        final inputs = {
+          'inputs': await OrtValue.fromList(['Hello world', 'Hello world louder'], [2]),
+        };
+
+        final outputs = await session.run(inputs);
+        final indices = outputs['indices'];
+        final output = outputs['output'];
+        expect(indices!.dataType, OrtDataType.int64);
+        expect(indices.shape, [3]);
+        expect(output!.dataType, OrtDataType.int32);
+        expect(output.shape, [10]);
+        // hardcoded the values to the example inputs
+        expect(await indices.asList(), [0, 4, 10]);
+        expect(await output.asList(), [1, 17486, 1017, 2, 1, 17486, 1017, 155, 21869, 2]);
+
+        // clean up
+        for (var input in inputs.values) {
+          input.dispose();
+        }
+        for (var output in outputs.values) {
+          output.dispose();
+        }
+        await session.close();
+      } else {
+        expect(() async => await onnxRuntime.createSessionFromAsset(modelPath), throwsA(isA<PlatformException>()));
+      }
+    });
+
+    testWidgets('SentencePiece inference test without custom ops', (WidgetTester tester) async {
+      expect(() async => await onnxRuntime.createSessionFromAsset(modelPath), throwsA(isA<PlatformException>()));
     });
   });
 }
