@@ -747,7 +747,7 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                                             return
                                         }
                                     }
-                                OnnxTensor.createTensor(ortEnvironment, ByteBuffer.wrap(byteData), longShape)
+                                OnnxTensor.createTensor(ortEnvironment, ByteBuffer.wrap(byteData), longShape, OnnxJavaType.UINT8)
                             }
                             "bool" -> {
                                 val boolData =
