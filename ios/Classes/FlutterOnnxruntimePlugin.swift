@@ -806,7 +806,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
         let floatBuffer = UnsafeBufferPointer(start: floatPtr, count: elementCount)
 
         // Convert float values to uint8 (clamping to valid range)
-        let uint8Array = floatBuffer.map { max(0, min(255, UInt8($0))) }
+        let uint8Array = floatBuffer.map { UInt8(max(0, min(255, Int32($0)))) }
         let newData = NSMutableData(bytes: uint8Array, length: uint8Array.count * MemoryLayout<UInt8>.stride)
         newTensor = try ORTValue(tensorData: newData, elementType: .uInt8, shape: shape.map { NSNumber(value: $0) })
 
@@ -935,20 +935,13 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
         newTensor = try ORTValue(tensorData: newData, elementType: .uInt8, shape: shape.map { NSNumber(value: $0) })
 
       case ("bool", "uint8"), ("bool", "int8"):
-        // Boolean -> UInt8/Int8 (Keep as uint8 with same values since bool is stored as uint8)
-        // Booleans are already represented as UInt8 in ORT, so just use the same tensor
-        let newValueId = UUID().uuidString
-        ortValues[newValueId] = tensor
-
-        // Return tensor information using the requested type
-        let resultInfo: [String: Any] = [
-          "valueId": newValueId,
-          "dataType": targetType,
-          "shape": shape
-        ]
-
-        result(resultInfo)
-        return
+        // Boolean -> UInt8/Int8 (bool is stored as uint8 in ORT ObjC, copy data with correct element type)
+        let bytePtr = sourceDataPtr.bytes.bindMemory(to: UInt8.self, capacity: elementCount)
+        let byteBuffer = UnsafeBufferPointer(start: bytePtr, count: elementCount)
+        let byteArray = Array(byteBuffer)
+        let targetElementType: ORTTensorElementDataType = (targetType == "uint8") ? .uInt8 : .int8
+        let newData = NSMutableData(bytes: byteArray, length: byteArray.count * MemoryLayout<UInt8>.stride)
+        newTensor = try ORTValue(tensorData: newData, elementType: targetElementType, shape: shape.map { NSNumber(value: $0) })
 
       default:
         // Unsupported conversion, return error
