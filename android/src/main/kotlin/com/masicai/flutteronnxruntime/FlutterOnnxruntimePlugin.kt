@@ -765,7 +765,7 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                                         }
                                     }
                                 // Boolean tensors are stored as bytes in ONNX Runtime
-                                OnnxTensor.createTensor(ortEnvironment, ByteBuffer.wrap(boolData), longShape)
+                                OnnxTensor.createTensor(ortEnvironment, ByteBuffer.wrap(boolData), longShape, OnnxJavaType.BOOL)
                             }
                             "string" -> {
                                 val stringData =
@@ -888,6 +888,24 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                                 val floatArray = FloatArray(byteArray.size) { (byteArray[it].toInt() and 0xFF).toFloat() }
                                 OnnxTensor.createTensor(ortEnvironment, FloatBuffer.wrap(floatArray), shape)
                             }
+                            // Uint8 to Int32
+                            dataType == "uint8" && targetType == "int32" -> {
+                                val byteBuffer = tensor.byteBuffer
+                                val byteArray = ByteArray(byteBuffer.remaining())
+                                byteBuffer.get(byteArray)
+
+                                val intArray = IntArray(byteArray.size) { byteArray[it].toInt() and 0xFF }
+                                OnnxTensor.createTensor(ortEnvironment, IntBuffer.wrap(intArray), shape)
+                            }
+                            // Uint8 to Int64
+                            dataType == "uint8" && targetType == "int64" -> {
+                                val byteBuffer = tensor.byteBuffer
+                                val byteArray = ByteArray(byteBuffer.remaining())
+                                byteBuffer.get(byteArray)
+
+                                val longArray = LongArray(byteArray.size) { (byteArray[it].toInt() and 0xFF).toLong() }
+                                OnnxTensor.createTensor(ortEnvironment, LongBuffer.wrap(longArray), shape)
+                            }
                             // Float32 to Int32
                             dataType == "float32" && targetType == "int32" -> {
                                 val floatBuffer = tensor.floatBuffer
@@ -930,6 +948,63 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                                 val intArray = IntArray(longArray.size) { longArray[it].toInt() }
                                 OnnxTensor.createTensor(ortEnvironment, IntBuffer.wrap(intArray), shape)
                             }
+                            // Float32 to Uint8
+                            dataType == "float32" && targetType == "uint8" -> {
+                                val floatBuffer = tensor.floatBuffer
+                                val floatArray = FloatArray(floatBuffer.remaining())
+                                floatBuffer.get(floatArray)
+
+                                // Clamp to valid uint8 range [0, 255]
+                                val byteData = ByteArray(floatArray.size) { floatArray[it].toInt().coerceIn(0, 255).toByte() }
+                                OnnxTensor.createTensor(ortEnvironment, ByteBuffer.wrap(byteData), shape, OnnxJavaType.UINT8)
+                            }
+                            // Int32 to Uint8
+                            dataType == "int32" && targetType == "uint8" -> {
+                                val intBuffer = tensor.intBuffer
+                                val intArray = IntArray(intBuffer.remaining())
+                                intBuffer.get(intArray)
+
+                                // Clamp to valid uint8 range [0, 255]
+                                val byteData = ByteArray(intArray.size) { intArray[it].coerceIn(0, 255).toByte() }
+                                OnnxTensor.createTensor(ortEnvironment, ByteBuffer.wrap(byteData), shape, OnnxJavaType.UINT8)
+                            }
+                            // Int64 to Uint8
+                            dataType == "int64" && targetType == "uint8" -> {
+                                val longBuffer = tensor.longBuffer
+                                val longArray = LongArray(longBuffer.remaining())
+                                longBuffer.get(longArray)
+
+                                // Clamp to valid uint8 range [0, 255]
+                                val byteData = ByteArray(longArray.size) { longArray[it].coerceIn(0, 255).toByte() }
+                                OnnxTensor.createTensor(ortEnvironment, ByteBuffer.wrap(byteData), shape, OnnxJavaType.UINT8)
+                            }
+                            // Boolean to Float32
+                            dataType == "bool" && targetType == "float32" -> {
+                                val byteBuffer = tensor.byteBuffer
+                                val byteArray = ByteArray(byteBuffer.remaining())
+                                byteBuffer.get(byteArray)
+
+                                val floatArray = FloatArray(byteArray.size) { if (byteArray[it] != 0.toByte()) 1.0f else 0.0f }
+                                OnnxTensor.createTensor(ortEnvironment, FloatBuffer.wrap(floatArray), shape)
+                            }
+                            // Boolean to Int32
+                            dataType == "bool" && targetType == "int32" -> {
+                                val byteBuffer = tensor.byteBuffer
+                                val byteArray = ByteArray(byteBuffer.remaining())
+                                byteBuffer.get(byteArray)
+
+                                val intArray = IntArray(byteArray.size) { if (byteArray[it] != 0.toByte()) 1 else 0 }
+                                OnnxTensor.createTensor(ortEnvironment, IntBuffer.wrap(intArray), shape)
+                            }
+                            // Boolean to Int64
+                            dataType == "bool" && targetType == "int64" -> {
+                                val byteBuffer = tensor.byteBuffer
+                                val byteArray = ByteArray(byteBuffer.remaining())
+                                byteBuffer.get(byteArray)
+
+                                val longArray = LongArray(byteArray.size) { if (byteArray[it] != 0.toByte()) 1L else 0L }
+                                OnnxTensor.createTensor(ortEnvironment, LongBuffer.wrap(longArray), shape)
+                            }
                             // Boolean to Int8/Uint8
                             dataType == "bool" && (targetType == "int8" || targetType == "uint8") -> {
                                 val byteBuffer = tensor.byteBuffer
@@ -937,7 +1012,8 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                                 byteBuffer.get(byteArray)
 
                                 // Boolean values are already stored as bytes (0 or 1)
-                                OnnxTensor.createTensor(ortEnvironment, ByteBuffer.wrap(byteArray), shape)
+                                val javaType = if (targetType == "uint8") OnnxJavaType.UINT8 else OnnxJavaType.INT8
+                                OnnxTensor.createTensor(ortEnvironment, ByteBuffer.wrap(byteArray), shape, javaType)
                             }
                             // Int8/Uint8 to Boolean
                             (dataType == "int8" || dataType == "uint8") && targetType == "bool" -> {
@@ -947,7 +1023,7 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
 
                                 // Convert to boolean representation (non-zero values become true)
                                 val boolArray = ByteArray(byteArray.size) { if (byteArray[it] != 0.toByte()) 1.toByte() else 0.toByte() }
-                                OnnxTensor.createTensor(ortEnvironment, ByteBuffer.wrap(boolArray), shape)
+                                OnnxTensor.createTensor(ortEnvironment, ByteBuffer.wrap(boolArray), shape, OnnxJavaType.BOOL)
                             }
                             // Same type conversion (no-op)
                             (dataType == "float32" && targetType == "float32") ||
