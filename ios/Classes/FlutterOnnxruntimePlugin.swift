@@ -860,6 +860,69 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
         let newData = NSMutableData(bytes: floatArray, length: floatArray.count * MemoryLayout<Float>.stride)
         newTensor = try ORTValue(tensorData: newData, elementType: .float, shape: shape.map { NSNumber(value: $0) })
 
+      case ("uint8", "int32"):
+        // UInt8 -> Int32
+        let uint8PtrI32 = sourceDataPtr.bytes.bindMemory(to: UInt8.self, capacity: elementCount)
+        let uint8BufferI32 = UnsafeBufferPointer(start: uint8PtrI32, count: elementCount)
+
+        let int32FromUint8 = uint8BufferI32.map { Int32($0) }
+        let newDataI32 = NSMutableData(bytes: int32FromUint8, length: int32FromUint8.count * MemoryLayout<Int32>.stride)
+        newTensor = try ORTValue(tensorData: newDataI32, elementType: .int32, shape: shape.map { NSNumber(value: $0) })
+
+      case ("uint8", "int64"):
+        // UInt8 -> Int64
+        let uint8PtrI64 = sourceDataPtr.bytes.bindMemory(to: UInt8.self, capacity: elementCount)
+        let uint8BufferI64 = UnsafeBufferPointer(start: uint8PtrI64, count: elementCount)
+
+        let int64FromUint8 = uint8BufferI64.map { Int64($0) }
+        let newDataI64 = NSMutableData(bytes: int64FromUint8, length: int64FromUint8.count * MemoryLayout<Int64>.stride)
+        newTensor = try ORTValue(tensorData: newDataI64, elementType: .int64, shape: shape.map { NSNumber(value: $0) })
+
+      case ("int32", "uint8"):
+        // Int32 -> UInt8 (clamping to valid range)
+        let intPtrU8 = sourceDataPtr.bytes.bindMemory(to: Int32.self, capacity: elementCount)
+        let intBufferU8 = UnsafeBufferPointer(start: intPtrU8, count: elementCount)
+
+        let uint8FromInt32 = intBufferU8.map { UInt8(max(0, min(255, $0))) }
+        let newDataU8FromI32 = NSMutableData(bytes: uint8FromInt32, length: uint8FromInt32.count * MemoryLayout<UInt8>.stride)
+        newTensor = try ORTValue(tensorData: newDataU8FromI32, elementType: .uInt8, shape: shape.map { NSNumber(value: $0) })
+
+      case ("int64", "uint8"):
+        // Int64 -> UInt8 (clamping to valid range)
+        let int64PtrU8 = sourceDataPtr.bytes.bindMemory(to: Int64.self, capacity: elementCount)
+        let int64BufferU8 = UnsafeBufferPointer(start: int64PtrU8, count: elementCount)
+
+        let uint8FromInt64 = int64BufferU8.map { UInt8(max(0, min(255, $0))) }
+        let newDataU8FromI64 = NSMutableData(bytes: uint8FromInt64, length: uint8FromInt64.count * MemoryLayout<UInt8>.stride)
+        newTensor = try ORTValue(tensorData: newDataU8FromI64, elementType: .uInt8, shape: shape.map { NSNumber(value: $0) })
+
+      case ("bool", "float32"):
+        // Boolean -> Float32 (bool is stored as uint8 in ORT ObjC)
+        let boolPtrF = sourceDataPtr.bytes.bindMemory(to: UInt8.self, capacity: elementCount)
+        let boolBufferF = UnsafeBufferPointer(start: boolPtrF, count: elementCount)
+
+        let floatFromBool = boolBufferF.map { $0 != 0 ? Float(1.0) : Float(0.0) }
+        let newDataFFromBool = NSMutableData(bytes: floatFromBool, length: floatFromBool.count * MemoryLayout<Float>.stride)
+        newTensor = try ORTValue(tensorData: newDataFFromBool, elementType: .float, shape: shape.map { NSNumber(value: $0) })
+
+      case ("bool", "int32"):
+        // Boolean -> Int32 (bool is stored as uint8 in ORT ObjC)
+        let boolPtrI32 = sourceDataPtr.bytes.bindMemory(to: UInt8.self, capacity: elementCount)
+        let boolBufferI32 = UnsafeBufferPointer(start: boolPtrI32, count: elementCount)
+
+        let int32FromBool = boolBufferI32.map { $0 != 0 ? Int32(1) : Int32(0) }
+        let newDataI32FromBool = NSMutableData(bytes: int32FromBool, length: int32FromBool.count * MemoryLayout<Int32>.stride)
+        newTensor = try ORTValue(tensorData: newDataI32FromBool, elementType: .int32, shape: shape.map { NSNumber(value: $0) })
+
+      case ("bool", "int64"):
+        // Boolean -> Int64 (bool is stored as uint8 in ORT ObjC)
+        let boolPtrI64 = sourceDataPtr.bytes.bindMemory(to: UInt8.self, capacity: elementCount)
+        let boolBufferI64 = UnsafeBufferPointer(start: boolPtrI64, count: elementCount)
+
+        let int64FromBool = boolBufferI64.map { $0 != 0 ? Int64(1) : Int64(0) }
+        let newDataI64FromBool = NSMutableData(bytes: int64FromBool, length: int64FromBool.count * MemoryLayout<Int64>.stride)
+        newTensor = try ORTValue(tensorData: newDataI64FromBool, elementType: .int64, shape: shape.map { NSNumber(value: $0) })
+
       case ("uint8", "bool"), ("int8", "bool"):
         // UInt8/Int8 -> Boolean (treated as uint8, non-zero = true)
         // Since Bool is not directly supported, we use uint8 (0=false, 1=true)
