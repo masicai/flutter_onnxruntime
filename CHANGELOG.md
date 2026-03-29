@@ -1,3 +1,8 @@
+## 1.6.4
+* Fix tensor creation for bool and uint8 types
+* Add missing tensor conversions for bool and uint8 types across Android, iOS/macOS, and Web
+* Add more integration tests to harness the conversions
+
 ## 1.6.3
 * Add float16 tensor support for iOS and macOS
 * Upgrade `onnxruntime-objc` for macOS to 1.22.0
