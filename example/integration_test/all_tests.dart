@@ -137,8 +137,7 @@ void main() {
         final retrievedData = await tensor.asFlattenedList();
         expect(retrievedData.length, 4);
         for (int i = 0; i < inputData.length; i++) {
-          final retrievedBoolValue = retrievedData[i] == 1;
-          expect(retrievedBoolValue, inputData[i]);
+          expect(retrievedData[i], inputData[i]);
         }
 
         await tensor.dispose();
@@ -468,6 +467,96 @@ void main() {
         expect(retrievedData[1], 'World');
 
         await tensor1.dispose();
+      });
+
+      testWidgets('Uint8 to Float32 conversion', (WidgetTester tester) async {
+        // Use values above 127 to catch int8/uint8 mistype bugs
+        // If tensor is wrongly created as int8, 128 -> -128.0 and 255 -> -1.0
+        final inputData = Uint8List.fromList([0, 127, 128, 255]);
+        final shape = [4];
+
+        final tensor = await OrtValue.fromList(inputData, shape);
+        expect(tensor.dataType, OrtDataType.uint8);
+
+        final convertedTensor = await tensor.to(OrtDataType.float32);
+        expect(convertedTensor.dataType, OrtDataType.float32);
+        expect(convertedTensor.shape, shape);
+
+        final retrievedData = await convertedTensor.asFlattenedList();
+        expect(retrievedData.length, 4);
+        expect(retrievedData[0], closeTo(0.0, 1e-5));
+        expect(retrievedData[1], closeTo(127.0, 1e-5));
+        expect(retrievedData[2], closeTo(128.0, 1e-5));
+        expect(retrievedData[3], closeTo(255.0, 1e-5));
+
+        await tensor.dispose();
+        await convertedTensor.dispose();
+      });
+
+      testWidgets('Uint8 to Int32 conversion', (WidgetTester tester) async {
+        final inputData = Uint8List.fromList([0, 127, 128, 255]);
+        final shape = [4];
+
+        final tensor = await OrtValue.fromList(inputData, shape);
+        expect(tensor.dataType, OrtDataType.uint8);
+
+        final convertedTensor = await tensor.to(OrtDataType.int32);
+        expect(convertedTensor.dataType, OrtDataType.int32);
+        expect(convertedTensor.shape, shape);
+
+        final retrievedData = await convertedTensor.asFlattenedList();
+        expect(retrievedData.length, 4);
+        expect(retrievedData[0], 0);
+        expect(retrievedData[1], 127);
+        expect(retrievedData[2], 128);
+        expect(retrievedData[3], 255);
+
+        await tensor.dispose();
+        await convertedTensor.dispose();
+      });
+
+      testWidgets('Bool to Uint8 conversion', (WidgetTester tester) async {
+        final inputData = [true, false, true, false];
+        final shape = [4];
+
+        final tensor = await OrtValue.fromList(inputData, shape);
+        expect(tensor.dataType, OrtDataType.bool);
+
+        final convertedTensor = await tensor.to(OrtDataType.uint8);
+        expect(convertedTensor.dataType, OrtDataType.uint8);
+        expect(convertedTensor.shape, shape);
+
+        final retrievedData = await convertedTensor.asFlattenedList();
+        expect(retrievedData.length, 4);
+        expect(retrievedData[0], 1);
+        expect(retrievedData[1], 0);
+        expect(retrievedData[2], 1);
+        expect(retrievedData[3], 0);
+
+        await tensor.dispose();
+        await convertedTensor.dispose();
+      });
+
+      testWidgets('Uint8 to Bool conversion', (WidgetTester tester) async {
+        final inputData = Uint8List.fromList([0, 1, 128, 255]);
+        final shape = [4];
+
+        final tensor = await OrtValue.fromList(inputData, shape);
+        expect(tensor.dataType, OrtDataType.uint8);
+
+        final convertedTensor = await tensor.to(OrtDataType.bool);
+        expect(convertedTensor.dataType, OrtDataType.bool);
+        expect(convertedTensor.shape, shape);
+
+        final retrievedData = await convertedTensor.asFlattenedList();
+        expect(retrievedData.length, 4);
+        expect(retrievedData[0], false); // 0 -> false
+        expect(retrievedData[1], true); // 1 -> true
+        expect(retrievedData[2], true); // 128 -> true (non-zero)
+        expect(retrievedData[3], true); // 255 -> true (non-zero)
+
+        await tensor.dispose();
+        await convertedTensor.dispose();
       });
     });
 

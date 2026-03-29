@@ -1088,6 +1088,101 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
           newTensor = tensorConstructor.callAsConstructorVarArgs(['float32'.toJS, jsFloatArray, jsArrayFrom(shape)]);
           break;
 
+        // Uint8 to Int32
+        case 'uint8-int32':
+          final intArray = [];
+          for (var i = 0; i < dataLength; i++) {
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            intArray.add(val.toDartInt);
+          }
+
+          final jsIntArray = _convertToTypedArray(intArray, 'Int32Array');
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['int32'.toJS, jsIntArray, jsArrayFrom(shape)]);
+          break;
+
+        // Uint8 to Int64
+        case 'uint8-int64':
+          throw PlatformException(
+            code: "CONVERSION_ERROR",
+            message: "Int64 conversions are not fully supported in the web implementation yet",
+            details: null,
+          );
+
+        // Float32 to Uint8
+        case 'float32-uint8':
+          final byteArray = [];
+          for (var i = 0; i < dataLength; i++) {
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            final d = val.toDartDouble;
+            byteArray.add(d.isNaN ? 0 : d.clamp(0, 255).toInt());
+          }
+
+          final jsUint8Array = _convertToTypedArray(byteArray, 'Uint8Array');
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['uint8'.toJS, jsUint8Array, jsArrayFrom(shape)]);
+          break;
+
+        // Int32 to Uint8
+        case 'int32-uint8':
+          final byteArray = [];
+          for (var i = 0; i < dataLength; i++) {
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            byteArray.add(val.toDartInt.clamp(0, 255));
+          }
+
+          final jsUint8Array = _convertToTypedArray(byteArray, 'Uint8Array');
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['uint8'.toJS, jsUint8Array, jsArrayFrom(shape)]);
+          break;
+
+        // Int64 to Uint8
+        case 'int64-uint8':
+          final byteArray = [];
+          for (var i = 0; i < dataLength; i++) {
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            int intValue = 0;
+            try {
+              intValue = val.toDartInt;
+            } catch (e) {
+              intValue = 0;
+            }
+            byteArray.add(intValue.clamp(0, 255));
+          }
+
+          final jsUint8Array = _convertToTypedArray(byteArray, 'Uint8Array');
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['uint8'.toJS, jsUint8Array, jsArrayFrom(shape)]);
+          break;
+
+        // Boolean to Float32
+        case 'bool-float32':
+          final floatArray = [];
+          for (var i = 0; i < dataLength; i++) {
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            floatArray.add(val.toDartInt != 0 ? 1.0 : 0.0);
+          }
+
+          final jsFloatArray = _convertToTypedArray(floatArray, 'Float32Array');
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['float32'.toJS, jsFloatArray, jsArrayFrom(shape)]);
+          break;
+
+        // Boolean to Int32
+        case 'bool-int32':
+          final intArray = [];
+          for (var i = 0; i < dataLength; i++) {
+            final val = jsData.getProperty(i.toString().toJS) as JSNumber;
+            intArray.add(val.toDartInt != 0 ? 1 : 0);
+          }
+
+          final jsIntArray = _convertToTypedArray(intArray, 'Int32Array');
+          newTensor = tensorConstructor.callAsConstructorVarArgs(['int32'.toJS, jsIntArray, jsArrayFrom(shape)]);
+          break;
+
+        // Boolean to Int64
+        case 'bool-int64':
+          throw PlatformException(
+            code: "CONVERSION_ERROR",
+            message: "Int64 conversions are not fully supported in the web implementation yet",
+            details: null,
+          );
+
         // Boolean to Int8/Uint8
         case 'bool-int8':
         case 'bool-uint8':

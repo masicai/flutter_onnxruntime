@@ -142,7 +142,12 @@ class OrtValue {
   Future<List<dynamic>> asList() async {
     final data = await FlutterOnnxruntimePlatform.instance.getOrtValueData(id);
     final rawData = data['data'];
-    final dataList1d = (rawData is List) ? rawData : List<dynamic>.from(rawData);
+    var dataList1d = (rawData is List) ? rawData : List<dynamic>.from(rawData);
+    // On iOS/macOS, bool tensors are stored as uint8 internally,
+    // so convert 0/1 integers back to false/true
+    if (dataType == OrtDataType.bool && dataList1d.isNotEmpty && dataList1d.first is! bool) {
+      dataList1d = dataList1d.map((e) => e != 0).toList();
+    }
     return _reshapeList(dataList1d, shape);
   }
 
@@ -157,7 +162,13 @@ class OrtValue {
   Future<List<dynamic>> asFlattenedList() async {
     final data = await FlutterOnnxruntimePlatform.instance.getOrtValueData(id);
     final rawData = data['data'];
-    return (rawData is List) ? rawData : List<dynamic>.from(rawData);
+    final list = (rawData is List) ? rawData : List<dynamic>.from(rawData);
+    // On iOS/macOS, bool tensors are stored as uint8 internally,
+    // so convert 0/1 integers back to false/true
+    if (dataType == OrtDataType.bool && list.isNotEmpty && list.first is! bool) {
+      return list.map((e) => e != 0).toList();
+    }
+    return list;
   }
 
   /// Release native resources associated with this tensor
