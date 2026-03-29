@@ -17,6 +17,7 @@ on:
       # - 'cpp/**/*.cc'
       # - 'cpp/**/*.h'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
