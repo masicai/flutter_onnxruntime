@@ -136,9 +136,8 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
               do {
                 try sessionOptions.appendCoreMLExecutionProvider()
               } catch {
-                result(FlutterError(code: "SESSION_OPTIONS_ERROR",
-                  message: "Failed to append CoreML execution provider: \(error.localizedDescription)", details: nil))
-                return
+                // CoreML unavailable (e.g. simulator, unsupported device) — skip and fall back to CPU
+                print("[flutter_onnxruntime] CoreML not available, falling back to CPU: \(error.localizedDescription)")
               }
             case "XNNPACK":
               do {
