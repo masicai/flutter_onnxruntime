@@ -136,9 +136,8 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
               do {
                 try sessionOptions.appendCoreMLExecutionProvider()
               } catch {
-                result(FlutterError(code: "SESSION_OPTIONS_ERROR",
-                  message: "Failed to append CoreML execution provider: \(error.localizedDescription)", details: nil))
-                return
+                // CoreML unavailable (e.g. simulator, unsupported device) — skip and fall back to CPU
+                print("[flutter_onnxruntime] CoreML not available, falling back to CPU: \(error.localizedDescription)")
               }
             case "XNNPACK":
               do {
@@ -169,31 +168,42 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
         return
       }
 
-      let session = try ORTSession(env: safeEnv, modelPath: modelPath, sessionOptions: sessionOptions)
-      let sessionId = UUID().uuidString
-      sessions[sessionId] = session
+      // Dispatch heavy model loading to a background thread so the
+      // platform / UI thread stays free for rendering.
+      let capturedEnv = safeEnv
+      let capturedModelPath = modelPath
+      let capturedSessionOptions = sessionOptions
+      DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        guard let self = self else { return }
+        do {
+          let session = try ORTSession(env: capturedEnv, modelPath: capturedModelPath, sessionOptions: capturedSessionOptions)
 
-      // Get input and output names
-      var inputNames: [String] = []
-      var outputNames: [String] = []
+          var inputNames: [String] = []
+          var outputNames: [String] = []
+          if let inputNodeNames = try? session.inputNames() {
+            inputNames = inputNodeNames
+          }
+          if let outputNodeNames = try? session.outputNames() {
+            outputNames = outputNodeNames
+          }
 
-      // Get input names
-      if let inputNodeNames = try? session.inputNames() {
-        inputNames = inputNodeNames
+          DispatchQueue.main.async {
+            let sessionId = UUID().uuidString
+            self.sessions[sessionId] = session
+
+            let responseMap: [String: Any] = [
+              "sessionId": sessionId,
+              "inputNames": inputNames,
+              "outputNames": outputNames
+            ]
+            result(responseMap)
+          }
+        } catch {
+          DispatchQueue.main.async {
+            result(FlutterError(code: "SESSION_CREATION_FAILED", message: error.localizedDescription, details: nil))
+          }
+        }
       }
-
-      // Get output names
-      if let outputNodeNames = try? session.outputNames() {
-        outputNames = outputNodeNames
-      }
-
-      let responseMap: [String: Any] = [
-        "sessionId": sessionId,
-        "inputNames": inputNames,
-        "outputNames": outputNames
-      ]
-
-      result(responseMap)
     } catch {
       result(FlutterError(code: "SESSION_CREATION_FAILED", message: error.localizedDescription, details: nil))
     }
@@ -276,30 +286,46 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
       // Get output names
       let outputNames = try session.outputNames()
 
-      // Run inference with prepared output containers and run options if available
-      let outputs = try session.run(withInputs: ortInputs, outputNames: Set(outputNames), runOptions: runOptions)
+      // Dispatch heavy ONNX inference to a background thread so the
+      // platform / UI thread stays free for rendering.
+      let capturedRunOptions = runOptions
+      let capturedOrtInputs = ortInputs
+      let capturedOutputNameSet = Set(outputNames)
+      DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        guard let self = self else { return }
+        do {
+          let outputs = try session.run(withInputs: capturedOrtInputs, outputNames: capturedOutputNameSet, runOptions: capturedRunOptions)
 
-      // store outputs in ortValues dictionary and return metadata in Flutter format
-      var flutterOutputs: [String: Any] = [:]
-      for (outputName, outputTensor) in outputs {
-        let valueId = UUID().uuidString
-        ortValues[valueId] = outputTensor
+          DispatchQueue.main.async {
+            do {
+              var flutterOutputs: [String: Any] = [:]
+              for (outputName, outputTensor) in outputs {
+                let valueId = UUID().uuidString
+                self.ortValues[valueId] = outputTensor
 
-        // Check if output is float16 (ObjC enum doesn't support it, use C++ API)
-        if Float16Helper.isFloat16Tensor(outputTensor) {
-          let shapeArr = try Float16Helper.getTensorShape(outputTensor)
-          let shape = shapeArr.map { Int(truncating: $0) }
-          let typeName = Float16Helper.getElementTypeName(outputTensor)
-          flutterOutputs[outputName] = [valueId, typeName, shape]
-        } else {
-          let tensorInfo = try outputTensor.tensorTypeAndShapeInfo()
-          let shape = try tensorInfo.shape.map { Int($0) }
-          let typeName = _getDataTypeName(from: tensorInfo.elementType)
-          flutterOutputs[outputName] = [valueId, typeName, shape]
+                if Float16Helper.isFloat16Tensor(outputTensor) {
+                  let shapeArr = try Float16Helper.getTensorShape(outputTensor)
+                  let shape = shapeArr.map { Int(truncating: $0) }
+                  let typeName = Float16Helper.getElementTypeName(outputTensor)
+                  flutterOutputs[outputName] = [valueId, typeName, shape]
+                } else {
+                  let tensorInfo = try outputTensor.tensorTypeAndShapeInfo()
+                  let shape = try tensorInfo.shape.map { Int($0) }
+                  let typeName = self._getDataTypeName(from: tensorInfo.elementType)
+                  flutterOutputs[outputName] = [valueId, typeName, shape]
+                }
+              }
+              result(flutterOutputs)
+            } catch {
+              result(FlutterError(code: "INFERENCE_ERROR", message: error.localizedDescription, details: nil))
+            }
+          }
+        } catch {
+          DispatchQueue.main.async {
+            result(FlutterError(code: "INFERENCE_ERROR", message: error.localizedDescription, details: nil))
+          }
         }
       }
-      // Return result
-      result(flutterOutputs)
     } catch let error as FlutterError {
       result(error)
     } catch {
