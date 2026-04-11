@@ -19,7 +19,12 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
   private var env: ORTEnv?
 
   public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(name: "flutter_onnxruntime", binaryMessenger: registrar.messenger())
+    let taskQueue = registrar.messenger().makeBackgroundTaskQueue?()
+    let channel = FlutterMethodChannel(
+        name: "flutter_onnxruntime",
+        binaryMessenger: registrar.messenger(),
+        codec: FlutterStandardMethodCodec.sharedInstance(),
+        taskQueue: taskQueue)
     let instance = FlutterOnnxruntimePlugin()
     registrar.addMethodCallDelegate(instance, channel: channel)
 
