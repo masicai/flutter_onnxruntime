@@ -17,6 +17,8 @@ enum OrtError: Error {
 public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
   private var sessions = [String: ORTSession]()
   private var env: ORTEnv?
+  // Lock to serialize method handler and cleanup to prevent use-after-close races
+  private let lock = NSLock()
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let taskQueue = registrar.messenger().makeBackgroundTaskQueue?()
@@ -46,6 +48,10 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
   }
 
   private func cleanupResources() {
+    // Wait for any in-flight handler call to finish, then clean up
+    lock.lock()
+    defer { lock.unlock() }
+
     // Clear all OrtValues first (they may depend on sessions/env)
     ortValues.removeAll()
 
@@ -58,6 +64,9 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
 
   // swiftlint:disable:next cyclomatic_complexity
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    lock.lock()
+    defer { lock.unlock() }
+
     if env == nil {
       do {
         env = try ORTEnv(loggingLevel: ORTLoggingLevel.warning)

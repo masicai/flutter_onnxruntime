@@ -142,6 +142,9 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
     // Store OrtValues (tensors) by ID
     private val ortValues = ConcurrentHashMap<String, OnnxValue>()
 
+    // Lock to serialize method handler and cleanup to prevent use-after-close races
+    private val lock = Any()
+
     private fun ortTypeToString(type: OnnxJavaType): String {
         return when (type.toString()) {
             "FLOAT" -> "float32"
@@ -200,7 +203,7 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
     override fun onMethodCall(
         @NonNull call: MethodCall,
         @NonNull result: Result,
-    ) {
+    ) = synchronized(lock) {
         when (call.method) {
             "getPlatformVersion" -> {
                 result.success("Android ${android.os.Build.VERSION.RELEASE}")
@@ -1197,33 +1200,37 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
     override fun onDetachedFromEngine(
         @NonNull binding: FlutterPlugin.FlutterPluginBinding,
     ) {
-        // Close all OrtValues
-        for (value in ortValues.values) {
-            try {
-                value.close()
-            } catch (e: Exception) {
-                // Ignore exceptions during cleanup
-            }
-        }
-        ortValues.clear()
-
-        // Close all sessions
-        for (session in sessions.values) {
-            try {
-                session.close()
-            } catch (e: Exception) {
-                // Ignore exceptions during cleanup
-            }
-        }
-        sessions.clear()
-
-        // Close the environment
-        try {
-            ortEnvironment.close()
-        } catch (e: Exception) {
-            // Ignore exceptions during cleanup
-        }
-
+        // Stop accepting new calls before acquiring the lock
         channel.setMethodCallHandler(null)
+
+        // Wait for any in-flight handler call to finish, then clean up
+        synchronized(lock) {
+            // Close all OrtValues
+            for (value in ortValues.values) {
+                try {
+                    value.close()
+                } catch (e: Exception) {
+                    // Ignore exceptions during cleanup
+                }
+            }
+            ortValues.clear()
+
+            // Close all sessions
+            for (session in sessions.values) {
+                try {
+                    session.close()
+                } catch (e: Exception) {
+                    // Ignore exceptions during cleanup
+                }
+            }
+            sessions.clear()
+
+            // Close the environment
+            try {
+                ortEnvironment.close()
+            } catch (e: Exception) {
+                // Ignore exceptions during cleanup
+            }
+        }
     }
 }
