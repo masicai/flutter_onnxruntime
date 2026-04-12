@@ -186,11 +186,13 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
         @NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding,
     ) {
         val taskQueue = flutterPluginBinding.binaryMessenger.makeBackgroundTaskQueue()
-        channel = MethodChannel(
-            flutterPluginBinding.binaryMessenger,
-            "flutter_onnxruntime",
-            io.flutter.plugin.common.StandardMethodCodec.INSTANCE,
-            taskQueue)
+        channel =
+            MethodChannel(
+                flutterPluginBinding.binaryMessenger,
+                "flutter_onnxruntime",
+                io.flutter.plugin.common.StandardMethodCodec.INSTANCE,
+                taskQueue,
+            )
         channel.setMethodCallHandler(this)
         ortEnvironment = OrtEnvironment.getEnvironment()
     }
