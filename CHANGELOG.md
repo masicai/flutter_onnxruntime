@@ -1,3 +1,7 @@
+## 1.7.0
+* Run inference on a background thread via Flutter's TaskQueue for Android, iOS, and macOS
+* Prevent race condition introduced by running inference on a background thread in the case of disposing the session while inference is running
+
 ## 1.6.4
 * Fix tensor creation for bool and uint8 types
 * Add missing tensor conversions for bool and uint8 types across Android, iOS/macOS, and Web
