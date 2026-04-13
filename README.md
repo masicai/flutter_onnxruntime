@@ -2,6 +2,8 @@
 <p align="center">
 <a href="https://pub.dev/packages/flutter_onnxruntime" alt="Flutter ONNX Runtime on pub.dev">
         <img src="https://img.shields.io/pub/v/flutter_onnxruntime.svg" height="25" /></a>
+<a href="https://pub.dev/packages/flutter_onnxruntime" alt="Flutter ONNX Runtime monthly downloads">
+        <img src="https://img.shields.io/pub/dm/flutter_onnxruntime.svg" height="25" /></a>
 </p>
 
 # flutter_onnxruntime
