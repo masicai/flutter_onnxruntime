@@ -22,7 +22,8 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let messenger = registrar.messenger
-    let taskQueue = messenger.makeBackgroundTaskQueue?()
+    // Workaround for Flutter macOS issue #184737 — see MessengerHelper.h.
+    let taskQueue = MessengerHelper.safeMakeBackgroundTaskQueue(messenger)
     let channel = FlutterMethodChannel(
         name: "flutter_onnxruntime",
         binaryMessenger: messenger,
