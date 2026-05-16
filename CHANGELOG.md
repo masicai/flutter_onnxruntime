@@ -1,3 +1,6 @@
+## 1.7.1
+* Prevent startup crash from `makeBackgroundTaskQueue` forwarding on macOS (#58 #59)
+
 ## 1.7.0
 * Run inference on a background thread via Flutter's TaskQueue for Android, iOS, and macOS
 * Prevent race condition introduced by running inference on a background thread in the case of disposing the session while inference is running
