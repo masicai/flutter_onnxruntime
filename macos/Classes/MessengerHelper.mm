@@ -16,10 +16,6 @@
   @try {
     return [messenger makeBackgroundTaskQueue];
   } @catch (NSException *exception) {
-    NSLog(@"[flutter_onnxruntime] makeBackgroundTaskQueue unavailable; method "
-          @"calls will run on the platform thread. Upgrade Flutter to restore "
-          @"background dispatch. (%@)",
-          exception.reason);
     return nil;
   }
 }
