@@ -100,8 +100,17 @@ class OrtSessionOptions {
   final bool? useArena;
   // set the device id for the session, default is 0
   final int? deviceId;
+  // set enable ORT Custom Ops, default is false
+  final bool? enableOrtCustomOps;
 
-  OrtSessionOptions({this.intraOpNumThreads, this.interOpNumThreads, this.providers, this.useArena, this.deviceId});
+  OrtSessionOptions({
+    this.intraOpNumThreads,
+    this.interOpNumThreads,
+    this.providers,
+    this.useArena,
+    this.deviceId,
+    this.enableOrtCustomOps,
+  });
 
   Map<String, dynamic> toMap() {
     return {
@@ -110,6 +119,7 @@ class OrtSessionOptions {
       if (providers != null && providers!.isNotEmpty) 'providers': providers!.map((p) => p.name).toList(),
       if (useArena != null) 'useArena': useArena,
       if (deviceId != null) 'deviceId': deviceId,
+      if (enableOrtCustomOps != null) 'enableOrtCustomOps': enableOrtCustomOps,
     };
   }
 }
