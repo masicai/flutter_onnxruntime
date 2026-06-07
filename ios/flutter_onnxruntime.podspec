@@ -16,7 +16,7 @@ A new Flutter plugin project.
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'
   s.platform = :ios, '16.0'
-  s.dependency 'onnxruntime-objc', '1.22.0'
+  s.dependency 'onnxruntime-objc', '1.24.2'
 
   # Flutter.framework does not contain a i386 slice.
   s.pod_target_xcconfig = {
