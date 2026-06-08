@@ -9,6 +9,8 @@ line_length:
 excluded:
   - Pods
   - ios/Pods
+  # SwiftPM build artifacts (contain generated Swift sources)
+  - flutter_onnxruntime/.build
 
 # Disabled rules
 disabled_rules:

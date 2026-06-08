@@ -4,7 +4,11 @@
 // This source code is licensed under the license found in the
 // LICENSE file in the root directory of this source tree.
 
-#import "MessengerHelper.h"
+#if __has_include("flutter_onnxruntime_objc/MessengerHelper.h")
+#import "flutter_onnxruntime_objc/MessengerHelper.h"  // SPM (public headers under include/flutter_onnxruntime_objc/)
+#else
+#import "MessengerHelper.h"  // CocoaPods
+#endif
 
 @implementation MessengerHelper
 

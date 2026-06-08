@@ -35,3 +35,8 @@ build/
 
 # Downloaded onnxruntime library
 onnxruntime_download/
+
+# SwiftPM plugin packages: dependency resolution happens at the app level,
+# so the plugin's Package.resolved is not committed.
+ios/flutter_onnxruntime/Package.resolved
+macos/flutter_onnxruntime/Package.resolved

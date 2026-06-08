@@ -1,34 +1,15 @@
 PODS:
-  - flutter_onnxruntime (0.0.1):
-    - FlutterMacOS
-    - onnxruntime-objc (= 1.24.2)
   - FlutterMacOS (1.0.0)
-  - onnxruntime-c (1.24.2)
-  - onnxruntime-objc (1.24.2):
-    - onnxruntime-objc/Core (= 1.24.2)
-  - onnxruntime-objc/Core (1.24.2):
-    - onnxruntime-c (= 1.24.2)
 
 DEPENDENCIES:
-  - flutter_onnxruntime (from `Flutter/ephemeral/.symlinks/plugins/flutter_onnxruntime/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
 
-SPEC REPOS:
-  trunk:
-    - onnxruntime-c
-    - onnxruntime-objc
-
 EXTERNAL SOURCES:
-  flutter_onnxruntime:
-    :path: Flutter/ephemeral/.symlinks/plugins/flutter_onnxruntime/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
 
 SPEC CHECKSUMS:
-  flutter_onnxruntime: 08b9417801a7245ac93c4cd4044229c63684d56c
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
-  onnxruntime-c: b58bafbc58707d165404665e46a7467a16e8e0e4
-  onnxruntime-objc: 99e0fe4b6d606970c6c1350c194c7629ef6e6fc9
 
 PODFILE CHECKSUM: 429f567d9ab401e946f77b31dd025355fafef34e
 
