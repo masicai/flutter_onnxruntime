@@ -15,11 +15,15 @@ Flutter plugin for running ONNX models with the native ONNX Runtime, supporting 
   s.source           = { :path => '.' }
   # Sources live in the Swift Package Manager layout and are shared by both build systems.
   s.source_files = 'flutter_onnxruntime/Sources/**/*.{swift,h,mm}'
-  # The vendored ORT internal headers are C++; keep them out of the umbrella
-  # header / module map (they cannot compile as Objective-C).
-  s.project_header_files = 'flutter_onnxruntime/Sources/flutter_onnxruntime_objc/vendor/*.h'
+  # Expose only the helper headers under include/; everything else (notably the
+  # vendored C++ ORT headers) stays private and out of the umbrella / module map,
+  # so it is never compiled as Objective-C.
+  s.public_header_files = 'flutter_onnxruntime/Sources/flutter_onnxruntime_objc/include/**/*.h'
   s.dependency 'Flutter'
   s.platform = :ios, '16.0'
+  # Keep this version in lockstep with the `onnxruntime-swift-package-manager`
+  # pin in flutter_onnxruntime/Package.swift so CocoaPods and SPM resolve the
+  # same ORT (and the vendored internal headers stay matched).
   s.dependency 'onnxruntime-objc', '1.24.2'
 
   # Flutter.framework does not contain a i386 slice.
