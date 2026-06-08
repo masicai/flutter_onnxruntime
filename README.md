@@ -10,7 +10,7 @@
 
 Native Wrapper Flutter Plugin for ONNX Runtime
 
-*Current supported ONNX Runtime version:* **1.22.0**
+*Current supported ONNX Runtime version:* **1.22.0** (1.24.2 for iOS and macOS)
 
 *Note:* For Android build, you need to upgrade your `flutter_onnxruntime` to version `>=1.5.1` to satisfy the [16 KB Google Play compatibility requirement](https://android-developers.googleblog.com/2025/05/prepare-play-apps-for-devices-with-16kb-page-size.html).
 
@@ -137,7 +137,9 @@ Refer to [troubleshooting.md](doc/troubleshooting.md) for more information.
 
 ONNX Runtime requires minimum version `iOS 16` and static linkage.
 
-In `ios/Podfile`, change the following lines:
+The plugin supports both CocoaPods (default) and Swift Package Manager. With Swift Package Manager enabled (see [below](#swift-package-manager-ios-and-macos)), no Podfile changes are needed, but the app's iOS "Minimum Deployments" must be at least `16.0` (Xcode enforces the plugin's minimum platform under SPM).
+
+For CocoaPods, in `ios/Podfile`, change the following lines:
 ```bash
 platform :ios, '16.0'
 
@@ -152,7 +154,7 @@ use_frameworks! :linkage => :static
 
 macOS build requires minimum version `macOS 14`.
 
-* In `macos/Podfile`, change the following lines:
+* For CocoaPods, in `macos/Podfile`, change the following lines:
   ```bash
   platform :osx, '14.0'
   ```
@@ -162,6 +164,16 @@ macOS build requires minimum version `macOS 14`.
   open Runner.xcworkspace
   ```
   In `Runner` -> `General`, change `Minimum Deployments` to `14.0`.
+
+### Swift Package Manager (iOS and macOS)
+
+The plugin supports [Flutter's Swift Package Manager integration](https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-app-developers), which is opt-in on Flutter 3.24+:
+
+```bash
+flutter config --enable-swift-package-manager
+```
+
+Both install paths ship the same ONNX Runtime version and behave identically. CocoaPods remains fully supported and is used automatically when the flag is off or on older Flutter versions.
 
 
 ## 🛠️ Troubleshooting

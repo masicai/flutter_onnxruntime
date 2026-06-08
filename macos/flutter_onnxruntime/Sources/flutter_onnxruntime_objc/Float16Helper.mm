@@ -4,7 +4,11 @@
 // This source code is licensed under the license found in the
 // LICENSE file in the root directory of this source tree.
 
-#import "Float16Helper.h"
+#if __has_include("flutter_onnxruntime_objc/Float16Helper.h")
+#import "flutter_onnxruntime_objc/Float16Helper.h"  // SPM (public headers under include/flutter_onnxruntime_objc/)
+#else
+#import "Float16Helper.h"  // CocoaPods
+#endif
 #import "ort_value_internal.h"
 #import "cxx_api.h"
 

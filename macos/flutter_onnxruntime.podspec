@@ -5,26 +5,30 @@
 Pod::Spec.new do |s|
   s.name             = 'flutter_onnxruntime'
   s.version          = '0.0.1'
-  s.summary          = 'A new Flutter plugin project.'
+  s.summary          = 'Flutter plugin for ONNX Runtime'
   s.description      = <<-DESC
-A new Flutter plugin project.
+Flutter plugin for running ONNX models with the native ONNX Runtime, supporting both CocoaPods and Swift Package Manager.
                        DESC
-  s.homepage         = 'http://example.com'
+  s.homepage         = 'https://github.com/masicai/flutter_onnxruntime'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Your Company' => 'email@example.com' }
+  s.author           = { 'MASIC AI' => 'contact@masicai.com' }
 
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
+  # Sources live in the Swift Package Manager layout and are shared by both build systems.
+  s.source_files = 'flutter_onnxruntime/Sources/**/*.{swift,h,mm}'
+  # Expose only the helper headers under include/; everything else (notably the
+  # vendored C++ ORT headers) stays private and out of the umbrella / module map,
+  # so it is never compiled as Objective-C.
+  s.public_header_files = 'flutter_onnxruntime/Sources/flutter_onnxruntime_objc/include/**/*.h'
 
-  # If your plugin requires a privacy manifest, for example if it collects user
-  # data, update the PrivacyInfo.xcprivacy file to describe your plugin's
-  # privacy impact, and then uncomment this line. For more information,
-  # see https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
-  # s.resource_bundles = {'flutter_onnxruntime_privacy' => ['Resources/PrivacyInfo.xcprivacy']}
+  s.resource_bundles = {'flutter_onnxruntime_privacy' => ['flutter_onnxruntime/Sources/flutter_onnxruntime/PrivacyInfo.xcprivacy']}
 
   s.dependency 'FlutterMacOS'
-  # Add ONNX Runtime dependency for macOS
-  s.dependency 'onnxruntime-objc', '1.22.0'
+  # Add ONNX Runtime dependency for macOS.
+  # Keep this version in lockstep with the `onnxruntime-swift-package-manager`
+  # pin in flutter_onnxruntime/Package.swift so CocoaPods and SPM resolve the
+  # same ORT (and the vendored internal headers stay matched).
+  s.dependency 'onnxruntime-objc', '1.24.2'
 
   s.platform = :osx, '14.0'
   s.pod_target_xcconfig = {

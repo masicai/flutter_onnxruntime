@@ -4,10 +4,20 @@
 // This source code is licensed under the license found in the
 // LICENSE file in the root directory of this source tree.
 
-import Cocoa
-import FlutterMacOS
-import onnxruntime_objc
+import Flutter
+import UIKit
 import Foundation
+
+#if canImport(OnnxRuntimeBindings)
+  import OnnxRuntimeBindings  // SPM
+#else
+  import onnxruntime_objc  // CocoaPods
+#endif
+#if canImport(flutter_onnxruntime_objc)
+  // SPM builds the ObjC++ helpers (Float16Helper) as a separate module;
+  // under CocoaPods they live in the same module as this file.
+  import flutter_onnxruntime_objc
+#endif
 
 enum OrtError: Error {
     case flutterError(FlutterError)
@@ -21,12 +31,10 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
   private let lock = NSLock()
 
   public static func register(with registrar: FlutterPluginRegistrar) {
-    let messenger = registrar.messenger
-    // Workaround for Flutter macOS issue #184737 — see MessengerHelper.h.
-    let taskQueue = MessengerHelper.safeMakeBackgroundTaskQueue(messenger)
+    let taskQueue = registrar.messenger().makeBackgroundTaskQueue?()
     let channel = FlutterMethodChannel(
         name: "flutter_onnxruntime",
-        binaryMessenger: messenger,
+        binaryMessenger: registrar.messenger(),
         codec: FlutterStandardMethodCodec.sharedInstance(),
         taskQueue: taskQueue)
     let instance = FlutterOnnxruntimePlugin()
@@ -36,7 +44,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
     NotificationCenter.default.addObserver(
       instance,
       selector: #selector(handleAppWillTerminate(_:)),
-      name: NSApplication.willTerminateNotification,
+      name: UIApplication.willTerminateNotification,
       object: nil
     )
   }
@@ -80,8 +88,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
 
     switch call.method {
     case "getPlatformVersion":
-      // Use macOS-specific system version info
-      result("macOS " + ProcessInfo.processInfo.operatingSystemVersionString)
+      result("iOS " + UIDevice.current.systemVersion)
 
     /** Create a new session
 
@@ -310,7 +317,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
           flutterOutputs[outputName] = [valueId, typeName, shape]
         } else {
           let tensorInfo = try outputTensor.tensorTypeAndShapeInfo()
-          let shape = tensorInfo.shape.map { Int(truncating: $0) }
+          let shape = try tensorInfo.shape.map { Int($0) }
           let typeName = _getDataTypeName(from: tensorInfo.elementType)
           flutterOutputs[outputName] = [valueId, typeName, shape]
         }
@@ -345,12 +352,30 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
       return
     }
 
-    guard sessions[sessionId] != nil else {
+    guard let session = sessions[sessionId] else {
       result(FlutterError(code: "INVALID_SESSION", message: "Session not found", details: nil))
       return
     }
 
-    // Return empty map as metadata functionality may not be available
+    // Note: 06/04/2025 on v1.21.0 session.getMetadata() is not supported in onnxruntime-objc
+    // do {
+    //   let modelMetadata = try session.getMetadata()
+
+    //   let metadataMap: [String: Any] = [
+    //     "producerName": modelMetadata.producerName ?? "",
+    //     "graphName": modelMetadata.graphName ?? "",
+    //     "domain": modelMetadata.domain ?? "",
+    //     "description": modelMetadata.description ?? "",
+    //     "version": modelMetadata.version,
+    //     "customMetadataMap": modelMetadata.customMetadata ?? [:]
+    //   ]
+
+    //   result(metadataMap)
+    // } catch {
+    //   result(FlutterError(code: "METADATA_ERROR", message: error.localizedDescription, details: nil))
+    // }
+
+    // return empty map
     result([:])
   }
 
@@ -370,6 +395,8 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
       var nodeInfoList: [[String: Any]] = []
 
       let inputNames = try session.inputNames()
+      // Note: 06/04/2025 on v1.21.0 session.getInputInfo() is not supported in onnxruntime-objc
+      // let inputInfoMap = try session.getInputInfo()
 
       for name in inputNames {
         let infoMap: [String: Any] = ["name": name]
@@ -398,6 +425,8 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
       var nodeInfoList: [[String: Any]] = []
 
       let outputNames = try session.outputNames()
+      // Note: 06/04/2025 on v1.21.0 session.getOutputInfo() is not supported in onnxruntime-objc
+      // let outputInfoMap = try session.getOutputInfo()
 
       for name in outputNames {
         let infoMap: [String: Any] = ["name": name]
@@ -517,9 +546,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
             return
           }
         } else {
-          result(FlutterError(code: "INVALID_DATA",
-                             message: "Data must be a list of numbers for int32 type",
-                             details: nil))
+          result(FlutterError(code: "INVALID_DATA", message: "Data must be a list of numbers for int32 type", details: nil))
           return
         }
 
@@ -553,9 +580,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
             return
           }
         } else {
-          result(FlutterError(code: "INVALID_DATA",
-                             message: "Data must be a list of numbers for int64 type",
-                             details: nil))
+          result(FlutterError(code: "INVALID_DATA", message: "Data must be a list of numbers for int64 type", details: nil))
           return
         }
 
@@ -572,9 +597,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
           let uint8Data = NSMutableData(data: typedData.data)
           tensor = try ORTValue(tensorData: uint8Data, elementType: .uInt8, shape: shapeNumbers)
         } else {
-          result(FlutterError(code: "INVALID_DATA",
-                             message: "Data must be a list of numbers for uint8 type",
-                             details: nil))
+          result(FlutterError(code: "INVALID_DATA", message: "Data must be a list of numbers for uint8 type", details: nil))
           return
         }
 
@@ -590,9 +613,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
           let uint8Data = NSMutableData(data: typedData.data)
           tensor = try ORTValue(tensorData: uint8Data, elementType: .uInt8, shape: shapeNumbers)
         } else {
-          result(FlutterError(code: "INVALID_DATA",
-                             message: "Data must be a list of booleans for bool type",
-                             details: nil))
+          result(FlutterError(code: "INVALID_DATA", message: "Data must be a list of booleans for bool type", details: nil))
           return
         }
 
@@ -707,7 +728,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
         sourceType = "float16"
       } else {
         let tensorInfo = try tensor.tensorTypeAndShapeInfo()
-        shape = tensorInfo.shape.map { Int(truncating: $0) }
+        shape = try tensorInfo.shape.map { Int(truncating: $0) }
         elementCount = shape.reduce(1, *)
         sourceType = _getDataTypeName(from: tensorInfo.elementType)
       }
@@ -977,7 +998,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
 
       // Get tensor information
       let tensorInfo = try tensor.tensorTypeAndShapeInfo()
-      let shape = tensorInfo.shape.map { Int(truncating: $0) }
+      let shape = try tensorInfo.shape.map { Int(truncating: $0) }
       let elementCount = shape.reduce(1, *)
       var data: Any
       let dataType = _getDataTypeName(from: tensorInfo.elementType)
@@ -1039,7 +1060,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
         data = FlutterStandardTypedData(float32: nsData)
       }
 
-      // Return data with shape and dataType
+      // Also include the data type in the result
       let resultMap: [String: Any] = [
         "data": data,
         "shape": shape,
