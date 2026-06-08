@@ -1,3 +1,8 @@
+## 1.8.0
+* Add Swift Package Manager support for iOS and macOS (#62); CocoaPods remains fully supported
+* Upgrade `onnxruntime-objc` from 1.22.0 to 1.24.2 for iOS and macOS (aligned with the official ONNX Runtime Swift package)
+* Move Android integration test CI from macOS to Ubuntu
+
 ## 1.7.1
 * Prevent startup crash from `makeBackgroundTaskQueue` forwarding on macOS (#58 #59)
 
