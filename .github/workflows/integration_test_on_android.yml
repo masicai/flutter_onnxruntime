@@ -1,0 +1,73 @@
+name: Integration Tests on Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'lib/src/**'
+      - 'android/**'
+      - 'example/integration_test/**'
+      - '.github/workflows/integration_test_on_android.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'lib/src/**'
+      - 'android/**'
+      - 'example/integration_test/**'
+      - '.github/workflows/integration_test_on_android.yml'
+
+jobs:
+  android_integration_test:
+    # ubuntu-latest provides KVM acceleration for the x86_64 emulator and has
+    # abundant free runners — the reactivecircus/android-emulator-runner
+    # recommended host. (Old Intel macOS runners queue indefinitely.)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.9'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          cd example
+          flutter pub get
+
+      - name: Verify model file exists
+        run: |
+          test -f example/assets/models/addition_model.ort
+          ls -la example/assets/models
+
+      - name: Start Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 26
+          arch: x86_64
+          target: google_apis
+          profile: Nexus 6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -e # Exit immediately if a command exits with a non-zero status
+
+            echo "--- Running flutter drive ---"
+            cd example && flutter drive --driver=test_driver/integration_test.dart --target=integration_test/all_tests.dart
+            echo "--- Flutter drive finished ---"
