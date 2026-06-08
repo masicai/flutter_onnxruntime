@@ -2,14 +2,24 @@ name: Integration Tests on macOS
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'macos/**'
   # push:
-  #   branches: [ main, master ]
-  # pull_request:
   #   branches: [ main, master ]
 
 jobs:
   macos_integration_test:
     runs-on: macos-latest
+    strategy:
+      # Run both lanes to completion: a CocoaPods regression and an SPM
+      # regression are independent signals.
+      fail-fast: false
+      matrix:
+        # cocoapods = SPM disabled (legacy/default path for older Flutter)
+        # spm       = Swift Package Manager enabled (flutter config opt-in)
+        package-manager: [cocoapods, spm]
 
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +33,14 @@ jobs:
       - name: Enable macOS desktop support
         run: flutter config --enable-macos-desktop
 
+      - name: Configure Swift Package Manager flag
+        run: |
+          if [ "${{ matrix.package-manager }}" = "spm" ]; then
+            flutter config --enable-swift-package-manager
+          else
+            flutter config --no-enable-swift-package-manager
+          fi
+
       - name: Install dependencies
         run: |
           flutter pub get
@@ -34,13 +52,62 @@ jobs:
           find . -name "addition_model.ort" || echo "Model not found!"
           ls -la example/assets/models || echo "Directory not found!"
 
+      - name: Verify SPM adoption warning is gone (SPM lane only)
+        if: matrix.package-manager == 'spm'
+        run: |
+          cd example
+          flutter build macos --debug 2>&1 | tee build.log
+          # The build must not warn that this plugin lacks SPM support.
+          ! grep -q "do not support Swift Package Manager" build.log
+
       - name: Run integration tests on macOS
         run: |
           # Use the existing example app
           cd example
-          
+
           # Run the integration test directly
-          flutter test integration_test/all_tests.dart -d macos 
+          flutter test integration_test/all_tests.dart -d macos
+
+  # Build-only iOS lane: catches link/header/deployment-target errors in both
+  # install paths without the cost of running simulator integration tests.
+  ios_build_test:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package-manager: [cocoapods, spm]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: 'stable'
+
+      - name: Configure Swift Package Manager flag
+        run: |
+          if [ "${{ matrix.package-manager }}" = "spm" ]; then
+            flutter config --enable-swift-package-manager
+          else
+            flutter config --no-enable-swift-package-manager
+          fi
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          cd example
+          flutter pub get
+
+      - name: Build iOS app (simulator, no codesign)
+        run: |
+          cd example
+          flutter build ios --simulator --debug 2>&1 | tee build.log
+          if [ "${{ matrix.package-manager }}" = "spm" ]; then
+            # The build must not warn that this plugin lacks SPM support.
+            ! grep -q "do not support Swift Package Manager" build.log
+          fi
 
   android_integration_test:
     runs-on: macos-13 # macOS runner needed for Android emulator

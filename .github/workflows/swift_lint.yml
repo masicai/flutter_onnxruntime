@@ -24,7 +24,12 @@ jobs:
     - name: Install SwiftLint
       run: brew install swiftlint
     
-    - name: Run SwiftLint
+    - name: Run SwiftLint (iOS)
       run: |
         cd ios
+        swiftlint --reporter github-actions-logging
+
+    - name: Run SwiftLint (macOS)
+      run: |
+        cd macos
         swiftlint --reporter github-actions-logging
