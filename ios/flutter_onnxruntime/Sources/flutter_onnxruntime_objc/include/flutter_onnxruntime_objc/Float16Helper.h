@@ -5,7 +5,11 @@
 // LICENSE file in the root directory of this source tree.
 
 #import <Foundation/Foundation.h>
-#import <onnxruntime_objc/ort_value.h>
+#if __has_include(<onnxruntime_objc/ort_value.h>)
+#import <onnxruntime_objc/ort_value.h>  // CocoaPods
+#else
+#import "ort_value.h"  // SPM (OnnxRuntimeBindings public include dir on search path)
+#endif
 
 NS_ASSUME_NONNULL_BEGIN
 

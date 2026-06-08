@@ -6,8 +6,18 @@
 
 import Flutter
 import UIKit
-import onnxruntime_objc
 import Foundation
+
+#if canImport(OnnxRuntimeBindings)
+  import OnnxRuntimeBindings  // SPM
+#else
+  import onnxruntime_objc  // CocoaPods
+#endif
+#if canImport(flutter_onnxruntime_objc)
+  // SPM builds the ObjC++ helpers (Float16Helper) as a separate module;
+  // under CocoaPods they live in the same module as this file.
+  import flutter_onnxruntime_objc
+#endif
 
 enum OrtError: Error {
     case flutterError(FlutterError)
