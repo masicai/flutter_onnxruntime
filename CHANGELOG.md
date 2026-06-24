@@ -1,3 +1,6 @@
+## 1.9.0
+* Migrate the Android plugin to Flutter's Built-in Kotlin: remove `apply plugin: "kotlin-android"` and the `android { kotlinOptions { } }` block, replaced by a top-level `kotlin { compilerOptions { } }` block. This silences the "plugins that apply Kotlin Gradle Plugin (KGP)" warning on Flutter 3.44+ and keeps the plugin building on future Flutter versions that drop implicit KGP support. Requires Flutter `>=3.44.0`.
+
 ## 1.8.0
 * Add Swift Package Manager support for iOS and macOS (#62); CocoaPods remains fully supported
 * Upgrade `onnxruntime-objc` from 1.22.0 to 1.24.2 for iOS and macOS (aligned with the official ONNX Runtime Swift package)
