@@ -1,40 +1,15 @@
 PODS:
   - Flutter (1.0.0)
-  - flutter_onnxruntime (0.0.1):
-    - Flutter
-    - onnxruntime-objc (= 1.24.2)
-  - integration_test (0.0.1):
-    - Flutter
-  - onnxruntime-c (1.24.2)
-  - onnxruntime-objc (1.24.2):
-    - onnxruntime-objc/Core (= 1.24.2)
-  - onnxruntime-objc/Core (1.24.2):
-    - onnxruntime-c (= 1.24.2)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
-  - flutter_onnxruntime (from `.symlinks/plugins/flutter_onnxruntime/ios`)
-  - integration_test (from `.symlinks/plugins/integration_test/ios`)
-
-SPEC REPOS:
-  trunk:
-    - onnxruntime-c
-    - onnxruntime-objc
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
-  flutter_onnxruntime:
-    :path: ".symlinks/plugins/flutter_onnxruntime/ios"
-  integration_test:
-    :path: ".symlinks/plugins/integration_test/ios"
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  flutter_onnxruntime: 95b07385e6ec60b3121fcf06fd1b8363655b5011
-  integration_test: 252f60fa39af5e17c3aa9899d35d908a0721b573
-  onnxruntime-c: b58bafbc58707d165404665e46a7467a16e8e0e4
-  onnxruntime-objc: 99e0fe4b6d606970c6c1350c194c7629ef6e6fc9
 
 PODFILE CHECKSUM: c0915517eae1a513480956f02c7781054ca94770
 
