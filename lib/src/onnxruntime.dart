@@ -47,18 +47,54 @@ class OnnxRuntime {
       // Join paths using string concatenation with platform-specific separator
       final filePath = '${directory.path}${Platform.pathSeparator}$fileName';
 
-      // Check if the model already exists
       final file = File(filePath);
-      if (!await file.exists()) {
-        // Ensure the directory exists
-        await Directory(directory.path).create(recursive: true);
-        // Extract asset to file
-        final data = await rootBundle.load(assetKey);
-        await file.writeAsBytes(data.buffer.asUint8List());
+      // Extract the asset only when it is not already cached. A cached file that
+      // was fully written by a previous run is safe to reuse (see _extractAsset,
+      // which writes atomically so a present file is always complete).
+      final wasCached = await file.exists();
+      if (!wasCached) {
+        await _extractAsset(assetKey, file);
       }
 
-      // Create session with the file path
-      return createSession(filePath, options: options);
+      try {
+        return await createSession(filePath, options: options);
+      } catch (_) {
+        // A cached model can still be truncated/corrupt (interrupted extraction
+        // by an older non-atomic build, partial cache eviction). Such a file
+        // "exists", so it would be reused and keep failing to load forever
+        // (e.g. ORT_INVALID_PROTOBUF). Re-extract the always-intact bundled
+        // asset and retry once so the install self-heals. Skip the retry when
+        // the asset was extracted in this very call: those bytes are already
+        // intact, so retrying identical bytes would only repeat the failure.
+        if (!wasCached) rethrow;
+        await _extractAsset(assetKey, file);
+        return await createSession(filePath, options: options);
+      }
+    }
+  }
+
+  /// Extracts a bundled asset to [destination] atomically.
+  ///
+  /// The bytes are written to a sibling temporary file first and then renamed
+  /// into place. rename() is atomic on the same filesystem, so an interrupted
+  /// write (app killed, low storage) can never leave a partially-written model
+  /// at the final path for a later run to reuse.
+  Future<void> _extractAsset(String assetKey, File destination) async {
+    await destination.parent.create(recursive: true);
+    final data = await rootBundle.load(assetKey);
+    final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+
+    final tempFile = File('${destination.path}.tmp');
+    await tempFile.writeAsBytes(bytes, flush: true);
+    try {
+      await tempFile.rename(destination.path);
+    } on FileSystemException {
+      // Some platforms (e.g. Windows) cannot rename onto an existing file.
+      // Only reached when replacing an already-cached (corrupt) file.
+      if (await destination.exists()) {
+        await destination.delete();
+      }
+      await tempFile.rename(destination.path);
     }
   }
 

@@ -152,11 +152,8 @@ void main() {
       expect(session.id, 'test_session_id');
     });
 
-    // This test requires mocking asset bundling which is complex in unit tests
-    // We're verifying the basic function structure here
-    test('createSessionFromAsset function structure is correct', () {
-      expect(onnxRuntime.createSessionFromAsset, isA<Function>());
-    });
+    // createSessionFromAsset is covered in create_session_from_asset_test.dart,
+    // which mocks the asset bundle and the temporary directory.
 
     test('getAvailableProviders returns list of providers', () async {
       final providers = await onnxRuntime.getAvailableProviders();
