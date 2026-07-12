@@ -24,7 +24,9 @@ Flutter plugin for running ONNX models with the native ONNX Runtime, supporting 
   # Keep this version in lockstep with the `onnxruntime-swift-package-manager`
   # pin in flutter_onnxruntime/Package.swift so CocoaPods and SPM resolve the
   # same ORT (and the vendored internal headers stay matched).
-  s.dependency 'onnxruntime-objc', '1.24.2'
+  # 1.23.0: last ORT without the KleidiAI conv memory regression of 1.24.x
+  # (microsoft/onnxruntime#29538); bump both pins together once ORT >= 1.28 ships.
+  s.dependency 'onnxruntime-objc', '1.23.0'
 
   # Flutter.framework does not contain a i386 slice.
   s.pod_target_xcconfig = {

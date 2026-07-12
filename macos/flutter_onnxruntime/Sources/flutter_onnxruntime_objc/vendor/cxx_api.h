@@ -1,4 +1,4 @@
-// VENDORED from https://github.com/microsoft/onnxruntime-swift-package-manager tag 1.24.2 (objectivec/cxx_api.h).
+// VENDORED from https://github.com/masicai/onnxruntime-swift-package-manager tag 1.23.0 (objectivec/cxx_api.h);
 // Internal header of the onnxruntime ObjC bindings, not exposed by the SPM package or CocoaPods pod.
 // Required for float16 support (see docs/proposal_float16_ios_macos.md and docs/proposal_spm_migration.md §5.1).
 // MUST stay byte-identical (below this comment) to the pinned onnxruntime version — re-diff on every ORT bump.
