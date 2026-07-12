@@ -10,7 +10,7 @@
 
 Native Wrapper Flutter Plugin for ONNX Runtime
 
-*Current supported ONNX Runtime version:* **1.22.0** (1.24.2 for iOS and macOS)
+*Current supported ONNX Runtime version:* **1.23.0**
 
 *Note:* For Android build, you need to upgrade your `flutter_onnxruntime` to version `>=1.5.1` to satisfy the [16 KB Google Play compatibility requirement](https://android-developers.googleblog.com/2025/05/prepare-play-apps-for-devices-with-16kb-page-size.html).
 
@@ -35,7 +35,7 @@ Add the following dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_onnxruntime: ^1.6.0
+  flutter_onnxruntime: ^1.8.1
 ```
 
 ### Quick Start
