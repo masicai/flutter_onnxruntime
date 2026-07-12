@@ -129,7 +129,15 @@ final autoTensor = await OrtValue.fromList(
   [1.0, 2.0, 3.0, 4.0],
   [2, 2],
 );
+
+// Create from List<bool> (creates a tensor(bool), e.g. for mask inputs)
+final boolTensor = await OrtValue.fromList(
+  [true, false, false, true],
+  [2, 2],
+);
 ```
+
+Tensors are created with the ONNX data type matching the input list: `float32`, `int32`, `int64`, `uint8`, `bool`, or `string`. `float16` and `int8` tensors are produced by converting an existing tensor with `to()`. All of these map to true ONNX tensor types on every platform; in particular, `bool` tensors are real `tensor(bool)` values (required by models with boolean inputs such as masks), not integer stand-ins.
 
 ### Tensor Data Type Conversion
 

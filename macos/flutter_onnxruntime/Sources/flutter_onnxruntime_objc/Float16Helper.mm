@@ -265,6 +265,8 @@ static float float16ToFloat(uint16_t float16Bits) {
                 return @"int8";
             case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16:
                 return @"float16";
+            case ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL:
+                return @"bool";
             case ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING:
                 return @"string";
             default:

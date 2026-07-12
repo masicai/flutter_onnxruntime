@@ -309,8 +309,8 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
         let valueId = UUID().uuidString
         ortValues[valueId] = outputTensor
 
-        // Check if output is float16 (ObjC enum doesn't support it, use C++ API)
-        if Float16Helper.isFloat16Tensor(outputTensor) {
+        // Check if output is float16 or bool (ObjC enum doesn't support them, use C++ API)
+        if Float16Helper.isFloat16Tensor(outputTensor) || BoolHelper.isBoolTensor(outputTensor) {
           let shapeArr = try Float16Helper.getTensorShape(outputTensor)
           let shape = shapeArr.map { Int(truncating: $0) }
           let typeName = Float16Helper.getElementTypeName(outputTensor)
@@ -602,16 +602,15 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
         }
 
       case "bool":
+        // Bool tensors: ORTTensorElementDataType has no bool case, create via C++ API
         if let boolArray = data as? [Bool] {
-          // Convert bool array to UInt8 array (1 for true, 0 for false)
-          let uint8Array = boolArray.map { $0 ? UInt8(1) : UInt8(0) }
-          let data = NSMutableData(bytes: uint8Array, length: uint8Array.count * MemoryLayout<UInt8>.stride)
-          // Use uint8 type since bool is not available in ORTTensorElementDataType
-          tensor = try ORTValue(tensorData: data, elementType: .uInt8, shape: shapeNumbers)
+          // Swift Bool is stored as one 0/1 byte, so its raw bytes are already valid
+          // bool tensor data (the helper normalizes non-zero bytes regardless)
+          let bytes = boolArray.withUnsafeBytes { Data($0) }
+          tensor = try BoolHelper.createBoolTensor(fromBytes: bytes, shape: shapeNumbers)
         } else if let typedData = data as? FlutterStandardTypedData {
-          // For bool values, assume they are stored as bytes, where non-zero is true
-          let uint8Data = NSMutableData(data: typedData.data)
-          tensor = try ORTValue(tensorData: uint8Data, elementType: .uInt8, shape: shapeNumbers)
+          // Bool values stored as bytes, where non-zero is true (normalized to 0/1 in the helper)
+          tensor = try BoolHelper.createBoolTensor(fromBytes: typedData.data, shape: shapeNumbers)
         } else {
           result(FlutterError(code: "INVALID_DATA", message: "Data must be a list of booleans for bool type", details: nil))
           return
@@ -714,18 +713,19 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
     }
 
     do {
-      // Check if source is float16 (must use C++ API since ObjC enum doesn't support it)
+      // Check if source is float16 or bool (must use C++ API since ObjC enum doesn't support them)
       let isSourceFloat16 = Float16Helper.isFloat16Tensor(tensor)
+      let isSourceBool = BoolHelper.isBoolTensor(tensor)
 
       var shape: [Int]
       var elementCount: Int
       var sourceType: String
 
-      if isSourceFloat16 {
+      if isSourceFloat16 || isSourceBool {
         let shapeArr = try Float16Helper.getTensorShape(tensor)
         shape = shapeArr.map { $0.intValue }
         elementCount = shape.reduce(1, *)
-        sourceType = "float16"
+        sourceType = Float16Helper.getElementTypeName(tensor)
       } else {
         let tensorInfo = try tensor.tensorTypeAndShapeInfo()
         shape = try tensorInfo.shape.map { Int(truncating: $0) }
@@ -799,7 +799,63 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
         return
       }
 
-      // Extract original data (safe for non-float16 tensors)
+      // Handle bool source via C++ helper (ObjC tensorData() throws for bool tensors)
+      if isSourceBool {
+        let boolBytes = try BoolHelper.extractBoolData(tensor)
+        let shapeNumbers = shape.map { NSNumber(value: $0) }
+        let converted: ORTValue
+
+        switch targetType {
+        case "uint8", "int8":
+          // Bool bytes are already 0/1, reuse them directly
+          let newData = NSMutableData(data: boolBytes)
+          converted = try ORTValue(tensorData: newData,
+                                   elementType: targetType == "uint8" ? .uInt8 : .int8,
+                                   shape: shapeNumbers)
+        case "float32":
+          let floatArray = boolBytes.map { Float($0) }
+          let newData = NSMutableData(bytes: floatArray, length: floatArray.count * MemoryLayout<Float>.stride)
+          converted = try ORTValue(tensorData: newData, elementType: .float, shape: shapeNumbers)
+        case "int32":
+          let int32Array = boolBytes.map { Int32($0) }
+          let newData = NSMutableData(bytes: int32Array, length: int32Array.count * MemoryLayout<Int32>.stride)
+          converted = try ORTValue(tensorData: newData, elementType: .int32, shape: shapeNumbers)
+        case "int64":
+          let int64Array = boolBytes.map { Int64($0) }
+          let newData = NSMutableData(bytes: int64Array, length: int64Array.count * MemoryLayout<Int64>.stride)
+          converted = try ORTValue(tensorData: newData, elementType: .int64, shape: shapeNumbers)
+        default:
+          result(FlutterError(code: "CONVERSION_ERROR",
+                             message: "Conversion from bool to \(targetType) is not supported",
+                             details: nil))
+          return
+        }
+
+        let newValueId = UUID().uuidString
+        ortValues[newValueId] = converted
+        result(["valueId": newValueId, "dataType": targetType, "shape": shape] as [String: Any])
+        return
+      }
+
+      // Handle bool target via C++ helper (only uint8/int8 sources, non-zero = true)
+      if targetType == "bool" {
+        guard sourceType == "uint8" || sourceType == "int8" else {
+          result(FlutterError(code: "CONVERSION_ERROR",
+                             message: "Conversion from \(sourceType) to bool is not supported",
+                             details: nil))
+          return
+        }
+        let srcPtr = try tensor.tensorData()
+        let bytes = Data(bytes: srcPtr.bytes, count: elementCount)
+        let boolTensor = try BoolHelper.createBoolTensor(fromBytes: bytes, shape: shape.map { NSNumber(value: $0) })
+
+        let newValueId = UUID().uuidString
+        ortValues[newValueId] = boolTensor
+        result(["valueId": newValueId, "dataType": "bool", "shape": shape] as [String: Any])
+        return
+      }
+
+      // Extract original data (safe for non-float16/non-bool tensors)
       let sourceDataPtr = try tensor.tensorData()
 
       // Convert data based on source type and target type
@@ -921,21 +977,6 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
         let newDataU8FromI64 = NSMutableData(bytes: uint8FromInt64, length: uint8FromInt64.count * MemoryLayout<UInt8>.stride)
         newTensor = try ORTValue(tensorData: newDataU8FromI64, elementType: .uInt8, shape: shape.map { NSNumber(value: $0) })
 
-      // Note: ("bool", ...) cases are not needed here because ORTTensorElementDataType has no bool variant.
-      // Bool tensors are stored as .uInt8 in ORT ObjC, so _getDataTypeName returns "uint8" as sourceType.
-      // The ("uint8", ...) cases above correctly handle bool tensor data (which is always 0 or 1).
-
-      case ("uint8", "bool"), ("int8", "bool"):
-        // UInt8/Int8 -> Boolean (treated as uint8, non-zero = true)
-        // Since Bool is not directly supported, we use uint8 (0=false, 1=true)
-        let bytePtr = sourceDataPtr.bytes.bindMemory(to: UInt8.self, capacity: elementCount)
-        let byteBuffer = UnsafeBufferPointer(start: bytePtr, count: elementCount)
-
-        // Convert any non-zero value to 1 (true)
-        let boolArray = byteBuffer.map { $0 > 0 ? UInt8(1) : UInt8(0) }
-        let newData = NSMutableData(bytes: boolArray, length: boolArray.count * MemoryLayout<UInt8>.stride)
-        newTensor = try ORTValue(tensorData: newData, elementType: .uInt8, shape: shape.map { NSNumber(value: $0) })
-
       default:
         // Unsupported conversion, return error
         result(FlutterError(code: "CONVERSION_ERROR",
@@ -991,6 +1032,24 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
           "data": data,
           "shape": shape,
           "dataType": "float16"
+        ]
+        result(resultMap)
+        return
+      }
+
+      // Bool tensors also bypass the ObjC API (no bool case in ORTTensorElementDataType)
+      if BoolHelper.isBoolTensor(tensor) {
+        let shapeArr = try Float16Helper.getTensorShape(tensor)
+        let shape = shapeArr.map { $0.intValue }
+
+        // One 0/1 byte per element; the Dart side converts them back to booleans
+        let boolBytes = try BoolHelper.extractBoolData(tensor)
+        let data = FlutterStandardTypedData(bytes: boolBytes)
+
+        let resultMap: [String: Any] = [
+          "data": data,
+          "shape": shape,
+          "dataType": "bool"
         ]
         result(resultMap)
         return
@@ -1095,7 +1154,7 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
     case .uInt8: return "uint8"
     case .int8: return "int8"
     case .string: return "string"
-    // ORTTensorElementDataType doesn't have a bool type, we use uint8 for boolean data
+    // Types missing from ORTTensorElementDataType (float16, bool) are handled via the C++ helpers
     default: return "unknown"
     }
   }
