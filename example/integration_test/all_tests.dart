@@ -35,6 +35,7 @@
 //
 // 3. The String Concat model is a similar version of Addition model but with string inputs and outputs
 //
+// 4. The Bool Not model is a simple model which performs Not operation on a 2D bool tensor
 
 import 'dart:io';
 
@@ -1239,6 +1240,42 @@ void main() {
       for (var input in inputs.values) {
         input.dispose();
       }
+      await output.dispose();
+    });
+  });
+
+  // Regression tests for https://github.com/masicai/flutter_onnxruntime/issues/64:
+  // iOS/macOS silently created uint8 tensors for bool data, so inference on models
+  // declaring tensor(bool) inputs failed with "Unexpected input data type.
+  // Actual: (tensor(uint8)), expected: (tensor(bool))".
+  group('Bool Model Test', () {
+    late OnnxRuntime onnxRuntime;
+    late OrtSession session;
+
+    setUpAll(() async {
+      onnxRuntime = OnnxRuntime();
+      session = await onnxRuntime.createSessionFromAsset('assets/models/bool_not_model.onnx');
+    });
+
+    tearDownAll(() async {
+      await session.close();
+    });
+
+    testWidgets('Bool model inference test', (WidgetTester tester) async {
+      final input = await OrtValue.fromList([true, false, false, true], [2, 2]);
+      expect(input.dataType, OrtDataType.bool);
+      expect(input.shape, [2, 2]);
+
+      final outputs = await session.run({'input': input});
+      final output = outputs['output'];
+      expect(output!.dataType, OrtDataType.bool);
+      expect(output.shape, [2, 2]);
+
+      final outputData = await output.asFlattenedList();
+      expect(outputData, [false, true, true, false]);
+
+      // clean up
+      await input.dispose();
       await output.dispose();
     });
   });
