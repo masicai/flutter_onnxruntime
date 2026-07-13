@@ -1,3 +1,6 @@
+## 1.8.2
+* Migrate Kotlin options to a newer format and resolve KTLC warnings to make the plugin ready for Kotlin 2.4 (#70)
+
 ## 1.8.1
 * Fix memory surge/OOM crash during inference on SME-capable ARM64 devices (iPhone A18+/M4+) caused by a KleidiAI convolution memory regression in ONNX Runtime 1.24.x (#66, upstream microsoft/onnxruntime#29538) (#68)
 * Move ONNX Runtime to 1.23.0 on all platforms: Android upgraded from 1.22.0; iOS/macOS downgraded from 1.24.2 via a masicai fork of the ONNX Runtime Swift package (Microsoft's SPM repo has no 1.23.x tag)
