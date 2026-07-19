@@ -19,7 +19,7 @@ let package = Package(
     // (microsoft/onnxruntime#29538). Point back to
     // https://github.com/microsoft/onnxruntime-swift-package-manager once a release
     // ships with microsoft/onnxruntime#28571 (expected ORT 1.28) and has an SPM tag.
-    .package(url: "https://github.com/masicai/onnxruntime-swift-package-manager", exact: "1.23.0")
+    .package(url: "https://github.com/masicai/onnxruntime-swift-package-manager", exact: "1.23.1")
   ],
   targets: [
     // Swift target. `import FlutterMacOS` resolves implicitly through the
