@@ -1,3 +1,6 @@
+## 1.8.3
+* Fix App Store Connect validation errors (ITMS-90208) on iOS/macOS by repackaging ONNX Runtime as a library-format xcframework instead of framework-format (issue #71)
+
 ## 1.8.2
 * Migrate Kotlin options to a newer format and resolve KTLC warnings to make the plugin ready for Kotlin 2.4 (#70)
 
