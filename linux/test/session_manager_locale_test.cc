@@ -9,9 +9,10 @@
 //
 // This test must own the first Ort::Env of its process: the ONNX operator
 // schemas, where the affected constants are parsed, are registered once per
-// process, so a process that already holds an Ort::Env cannot reproduce the
-// regression. linux/CMakeLists.txt therefore builds this file as its own test
-// executable rather than adding it to the shared runner.
+// process, so a process that already holds one cannot reproduce the regression.
+// Hence its own test executable (see linux/CMakeLists.txt), and hence exactly
+// one TEST in this file — a second one would register the schemas first and
+// silently defuse the other.
 
 #include <gtest/gtest.h>
 
@@ -22,13 +23,16 @@
 #include <string>
 #include <vector>
 
+#include <unistd.h>
+
 #include "src/session_manager.h"
 
 namespace {
 
 // Minimal ONNX model (ir_version 8, opset 14): input "x" float[1,8] -> HardSwish -> output "y"
-// float[1,8]. Embedded rather than loaded from example/assets/models/ so the native test binary
-// stays hermetic — it has no Flutter asset bundle. Regenerate with:
+// float[1,8]. Embedded rather than loaded from example/assets/models/hardswish_model.onnx (the same
+// bytes, used by the integration suite) so the native test binary stays hermetic — it has no Flutter
+// asset bundle. Regenerate both with:
 //
 //   import onnx
 //   from onnx import TensorProto, helper
@@ -59,7 +63,8 @@ public:
   CommaDecimalLocale() {
     const char *previous = setlocale(LC_NUMERIC, nullptr);
     previous_ = previous ? previous : "C";
-    for (const char *candidate : {"de_DE.UTF-8", "de_DE.utf8", "fr_FR.UTF-8", "fr_FR.utf8"}) {
+    // glibc normalises the codeset at lookup, so the ".utf8" spellings would be dead entries.
+    for (const char *candidate : {"de_DE.UTF-8", "fr_FR.UTF-8"}) {
       if (setlocale(LC_NUMERIC, candidate) != nullptr && std::string(localeconv()->decimal_point) == ",") {
         name_ = candidate;
         return;
@@ -75,33 +80,54 @@ private:
   std::string name_;
 };
 
+// Pid-suffixed so concurrent runs don't race on one path, and removed on destruction so a run that
+// fails an ASSERT partway through doesn't leave the file behind.
+class ScopedModelFile {
+public:
+  ScopedModelFile() : path_(testing::TempDir() + "hardswish_issue73_" + std::to_string(getpid()) + ".onnx") {}
+  ~ScopedModelFile() { std::remove(path_.c_str()); }
+
+  const std::string &path() const { return path_; }
+
+private:
+  std::string path_;
+};
+
 } // namespace
 
 TEST(SessionManagerLocaleTest, HardSwishIsCorrectUnderCommaDecimalLocale) {
   CommaDecimalLocale locale;
   if (locale.name().empty()) {
-    const char *require = std::getenv(kRequireLocaleEnvVar);
-    const bool required = require != nullptr && std::string(require) != "0";
     const char *hint = "No comma-decimal locale is installed, so the issue #73 regression cannot be "
                        "exercised. Generate one with `sudo locale-gen de_DE.UTF-8`.";
-    if (required) {
-      FAIL() << hint << " (" << kRequireLocaleEnvVar << " is set, so skipping is not allowed.)";
-    }
+    const char *require = std::getenv(kRequireLocaleEnvVar);
+    ASSERT_TRUE(require == nullptr || std::string(require) == "0")
+        << hint << " (" << kRequireLocaleEnvVar << " is set, so skipping is not allowed.)";
     GTEST_SKIP() << hint;
   }
   SCOPED_TRACE("comma-decimal locale: " + locale.name());
 
   // SessionManager loads models from a path, so write the embedded model to a temp file.
-  std::string model_path = testing::TempDir() + "hardswish_issue73.onnx";
+  ScopedModelFile model;
+  const std::string &model_path = model.path();
   {
     std::ofstream model_file(model_path, std::ios::binary);
     model_file.write(reinterpret_cast<const char *>(kHardSwishModel), sizeof(kHardSwishModel));
-    ASSERT_TRUE(model_file.good());
+    // Close before checking: write errors on a full/read-only temp dir only surface at flush time.
+    model_file.close();
+    ASSERT_TRUE(model_file.good()) << "failed to write " << model_path;
   }
 
   // Creates the Ort::Env (and thereby registers the ONNX schemas) with the comma-decimal locale
   // active — the exact situation of issue #73.
   SessionManager session_manager;
+
+  // Positive control: the comma-decimal locale must still be active on this thread. If it is not,
+  // either ScopedCLocale failed to restore the thread's locale, or the locale was never in effect and
+  // the assertions below would pass vacuously.
+  ASSERT_EQ(std::string(localeconv()->decimal_point), ",")
+      << "comma-decimal locale not active after SessionManager construction";
+
   std::string session_id = session_manager.createSession(model_path.c_str(), nullptr);
   ASSERT_TRUE(session_manager.hasSession(session_id));
 
@@ -114,6 +140,10 @@ TEST(SessionManagerLocaleTest, HardSwishIsCorrectUnderCommaDecimalLocale) {
 
   std::vector<Ort::Value> outputs = session_manager.runInference(session_id, inputs, {"x"});
   ASSERT_EQ(outputs.size(), 1u);
+  // GetTensorData does no validation, so pin the type and element count before indexing.
+  auto output_info = outputs[0].GetTensorTypeAndShapeInfo();
+  ASSERT_EQ(output_info.GetElementType(), ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT);
+  ASSERT_EQ(output_info.GetElementCount(), input.size());
   const float *result = outputs[0].GetTensorData<float>();
 
   // HardSwish(x) = x * clamp(x / 6 + 0.5, 0, 1), as reported in issue #73. The broken
@@ -123,6 +153,4 @@ TEST(SessionManagerLocaleTest, HardSwishIsCorrectUnderCommaDecimalLocale) {
   for (size_t i = 0; i < input.size(); ++i) {
     EXPECT_NEAR(result[i], expected[i], 1e-5f) << "at index " << i;
   }
-
-  std::remove(model_path.c_str());
 }

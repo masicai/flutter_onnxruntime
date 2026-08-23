@@ -287,20 +287,16 @@ if(${include_${PROJECT_NAME}_tests})
     # rather than using the shared library.
     add_executable(${TEST_RUNNER} test/flutter_onnxruntime_plugin_test.cc ${PLUGIN_SOURCES})
 
-    # The issue #73 locale regression only reproduces in a process that has not yet created an Ort::Env, because the
-    # ONNX operator schemas holding the affected constants are registered once per process. A dedicated binary
-    # guarantees that in every run mode, including running the test executables directly.
+    # Dedicated binary: the issue #73 regression only reproduces before any Ort::Env exists in the process, since the
+    # ONNX operator schemas holding the affected constants are registered once per process. Compile only the source
+    # under test so nothing else in this binary can create one first.
     set(LOCALE_TEST_RUNNER "${PROJECT_NAME}_locale_test")
-    add_executable(${LOCALE_TEST_RUNNER} test/session_manager_locale_test.cc ${PLUGIN_SOURCES})
+    add_executable(${LOCALE_TEST_RUNNER} test/session_manager_locale_test.cc src/session_manager.cc)
 
     foreach(TARGET ${TEST_RUNNER} ${LOCALE_TEST_RUNNER})
       apply_standard_settings(${TARGET})
-      target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-      target_include_directories(${TARGET} PRIVATE ${ONNXRUNTIME_INCLUDE_DIRS})
-      target_link_libraries(${TARGET} PRIVATE flutter)
-      target_link_libraries(${TARGET} PRIVATE PkgConfig::GTK)
-      target_link_libraries(${TARGET} PRIVATE ${ONNXRUNTIME_LIBRARIES})
-      target_link_libraries(${TARGET} PRIVATE gtest_main gmock)
+      target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" ${ONNXRUNTIME_INCLUDE_DIRS})
+      target_link_libraries(${TARGET} PRIVATE flutter PkgConfig::GTK ${ONNXRUNTIME_LIBRARIES} gtest_main gmock)
     endforeach()
 
     # Enable automatic test discovery.

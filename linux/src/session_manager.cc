@@ -10,25 +10,31 @@
 
 namespace {
 
-// ONNX Runtime registers the ONNX operator schemas when its environment is created, and onnx <= 1.22
-// parses operator function bodies (e.g. HardSwish) from their text form with locale-dependent
-// std::stof. GTK sets the process locale from the user's environment, so under comma-decimal locales
-// (de_DE, fr_FR, ...) fractional constants such as HardSwish's alpha = 1/6 silently parse as 0 and the
-// operator returns all zeros (issue #73, onnx/onnx#8111). Switch this thread to the "C" locale while
-// the environment is created; uselocale is thread-local, so the host app's global locale is untouched.
+// onnx <= 1.22 parses operator function bodies (e.g. HardSwish) from their text form with
+// locale-dependent std::stof. GTK sets the process locale from the user's environment, so under
+// comma-decimal locales (de_DE, fr_FR, ...) fractional constants such as HardSwish's alpha = 1/6
+// silently parse as 0 and the operator returns all zeros (issue #73, onnx/onnx#8111). Switch
+// LC_NUMERIC to "C" around the two calls that trigger that parsing: creation of the process's first
+// Ort::Env, which registers the operator schemas, and session construction, where context-dependent
+// bodies (LayerNormalization, Gelu, ...) are parsed. uselocale is thread-local, so the host app's
+// global locale is untouched.
 //
-// Keep this unconditionally even after onnx ships the upstream fix: USE_SYSTEM_ONNXRUNTIME defaults to
-// ON, so the onnx version behind the plugin is not pinned by this repo, and the guard costs one
-// newlocale per process.
+// Only schemas this plugin registers are protected: native code that creates an Ort::Env first must
+// be locale-safe on its own. Keep the guard even once onnx ships the upstream fix —
+// USE_SYSTEM_ONNXRUNTIME defaults to ON, so the onnx version behind the plugin is not pinned here.
 class ScopedCLocale {
 public:
-  ScopedCLocale() : c_locale_(newlocale(LC_ALL_MASK, "C", (locale_t)0)) {
+  ScopedCLocale() : c_locale_(newlocale(LC_NUMERIC_MASK, "C", (locale_t)0)) {
     if (c_locale_ != (locale_t)0) {
       previous_ = uselocale(c_locale_);
+    } else {
+      // A silently degraded guard is indistinguishable from the unfixed build, so leave a trace.
+      std::cerr << "flutter_onnxruntime: newlocale(\"C\") failed; ONNX operator constants may parse "
+                   "incorrectly under the current locale (issue #73)"
+                << std::endl;
     }
   }
   ~ScopedCLocale() {
-    // Restore only if this thread was actually switched, and free only what was actually allocated.
     if (previous_ != (locale_t)0) {
       uselocale(previous_);
     }
@@ -36,6 +42,10 @@ public:
       freelocale(c_locale_);
     }
   }
+
+  // Owns a locale_t; a copy would double-freelocale it.
+  ScopedCLocale(const ScopedCLocale &) = delete;
+  ScopedCLocale &operator=(const ScopedCLocale &) = delete;
 
 private:
   locale_t c_locale_;
@@ -61,6 +71,8 @@ SessionManager::~SessionManager() {
 
 std::string SessionManager::createSession(const char *model_path, void *options) {
   std::lock_guard<std::mutex> lock(mutex_);
+
+  ScopedCLocale locale_guard;
 
   // Generate a session ID
   std::string session_id = generateSessionId();
