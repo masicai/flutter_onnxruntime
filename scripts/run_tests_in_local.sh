@@ -188,6 +188,17 @@ run_ios_tests() {
     fi
 }
 
+# Function to run the native Linux unit tests (ctest), built by the Linux integration test run above.
+run_linux_native_tests() {
+    echo -e "${GREEN}----------------------------------------${NC}"
+    echo -e "${GREEN}Running native unit tests (ctest)${NC}"
+    echo -e "${GREEN}----------------------------------------${NC}"
+    # The issue #73 locale test skips unless a comma-decimal locale is installed; to exercise it,
+    # run `sudo locale-gen de_DE.UTF-8` (CI additionally sets FLUTTER_ONNXRUNTIME_REQUIRE_COMMA_LOCALE=1
+    # so that the skip becomes a failure there).
+    ctest --test-dir build/linux/x64/debug/plugins/flutter_onnxruntime --output-on-failure --no-tests=error
+}
+
 # Function to run Linux tests
 run_linux_tests() {
     # Test on Linux desktop
@@ -196,6 +207,7 @@ run_linux_tests() {
         # Take the first Linux device (usually just "linux")
         LINUX_DEVICE=$(echo "$LINUX_DEVICES" | head -n 1)
         run_integration_test_on_device "$LINUX_DEVICE" "Linux"
+        run_linux_native_tests
     else
         echo -e "${RED}Linux desktop not available. Skipping Linux tests.${NC}"
     fi

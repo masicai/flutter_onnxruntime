@@ -79,6 +79,8 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
 
     if env == nil {
       do {
+        // No locale guard needed here (unlike linux/src/session_manager.cc, issue #73): UIKit does
+        // not call setlocale(LC_ALL, ""), so the process C locale stays "C".
         env = try ORTEnv(loggingLevel: ORTLoggingLevel.warning)
       } catch {
         result(FlutterError(code: "ENV_INIT_FAILED", message: error.localizedDescription, details: nil))

@@ -286,17 +286,23 @@ if(${include_${PROJECT_NAME}_tests})
     # The plugin's exported API is not very useful for unit testing, so build the sources directly into the test binary
     # rather than using the shared library.
     add_executable(${TEST_RUNNER} test/flutter_onnxruntime_plugin_test.cc ${PLUGIN_SOURCES})
-    apply_standard_settings(${TEST_RUNNER})
-    target_include_directories(${TEST_RUNNER} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-    target_include_directories(${TEST_RUNNER} PRIVATE ${ONNXRUNTIME_INCLUDE_DIRS})
-    target_link_libraries(${TEST_RUNNER} PRIVATE flutter)
-    target_link_libraries(${TEST_RUNNER} PRIVATE PkgConfig::GTK)
-    target_link_libraries(${TEST_RUNNER} PRIVATE ${ONNXRUNTIME_LIBRARIES})
-    target_link_libraries(${TEST_RUNNER} PRIVATE gtest_main gmock)
+
+    # Dedicated binary: the issue #73 regression only reproduces before any Ort::Env exists in the process, since the
+    # ONNX operator schemas holding the affected constants are registered once per process. Compile only the source
+    # under test so nothing else in this binary can create one first.
+    set(LOCALE_TEST_RUNNER "${PROJECT_NAME}_locale_test")
+    add_executable(${LOCALE_TEST_RUNNER} test/session_manager_locale_test.cc src/session_manager.cc)
+
+    foreach(TARGET ${TEST_RUNNER} ${LOCALE_TEST_RUNNER})
+      apply_standard_settings(${TARGET})
+      target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" ${ONNXRUNTIME_INCLUDE_DIRS})
+      target_link_libraries(${TARGET} PRIVATE flutter PkgConfig::GTK ${ONNXRUNTIME_LIBRARIES} gtest_main gmock)
+    endforeach()
 
     # Enable automatic test discovery.
     include(GoogleTest)
     gtest_discover_tests(${TEST_RUNNER})
+    gtest_discover_tests(${LOCALE_TEST_RUNNER})
 
   endif() # CMake version check
 endif() # include_${PROJECT_NAME}_tests

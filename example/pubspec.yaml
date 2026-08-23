@@ -43,3 +43,4 @@ flutter:
     - assets/models/transpose_and_avg_model_fp16.onnx
     - assets/models/string_concat_model.onnx
     - assets/models/bool_not_model.onnx
+    - assets/models/hardswish_model.onnx

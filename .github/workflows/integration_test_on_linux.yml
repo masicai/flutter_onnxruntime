@@ -10,6 +10,8 @@ on:
       - 'linux/**/*.h'
       - 'linux/**/*.cpp'
       - 'linux/**/*.hpp'
+      - 'linux/CMakeLists.txt'
+      - '.github/workflows/integration_test_on_linux.yml'
   pull_request:
     branches: [ main, master ]
     paths:
@@ -19,6 +21,7 @@ on:
       - 'linux/**/*.cpp'
       - 'linux/**/*.hpp'
       - 'linux/CMakeLists.txt'
+      - '.github/workflows/integration_test_on_linux.yml'
 
 jobs:
   linux_integration_test:
@@ -47,9 +50,31 @@ jobs:
       - name: Enable Linux desktop support
         run: flutter config --enable-linux-desktop
 
+      # The issue #73 regression is invisible under the C locale that CI and most developer machines
+      # run in, so generate a comma-decimal locale and run all the tests below under it. This
+      # exercises the production trigger end to end: GTK sets the process locale from the environment
+      # at app start, then the plugin creates the Ort::Env. The HardSwish group in all_tests.dart is
+      # what makes the effect observable — without it these tests pass under any locale.
+      - name: Generate a comma-decimal locale
+        run: sudo locale-gen de_DE.UTF-8
+
       - name: Run integration tests on Linux
+        env:
+          LANG: de_DE.UTF-8
+          LC_ALL: de_DE.UTF-8
         run: |
           cd example
           # Start a virtual display server (https://github.com/wang-bin/fvp/issues/212)
           sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
           DISPLAY=:99 flutter test integration_test/all_tests.dart -d linux
+
+      # The integration-test step already built the example tree, including both native test
+      # binaries, so run ctest directly against that build. --no-tests=error keeps this step from
+      # passing vacuously if test discovery ever breaks, and REQUIRE_COMMA_LOCALE turns the issue #73
+      # test's "no locale installed" skip into a failure.
+      - name: Run native unit tests
+        env:
+          FLUTTER_ONNXRUNTIME_REQUIRE_COMMA_LOCALE: 1
+        run: |
+          cd example
+          ctest --test-dir build/linux/x64/debug/plugins/flutter_onnxruntime --output-on-failure --no-tests=error
