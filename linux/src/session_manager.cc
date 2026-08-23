@@ -6,8 +6,50 @@
 
 #include "session_manager.h"
 #include <iostream>
+#include <locale.h>
 
-SessionManager::SessionManager() : next_session_id_(1), env_(ORT_LOGGING_LEVEL_WARNING, "FlutterOnnxRuntime") {
+namespace {
+
+// ONNX Runtime registers the ONNX operator schemas when its environment is created, and onnx <= 1.22
+// parses operator function bodies (e.g. HardSwish) from their text form with locale-dependent
+// std::stof. GTK sets the process locale from the user's environment, so under comma-decimal locales
+// (de_DE, fr_FR, ...) fractional constants such as HardSwish's alpha = 1/6 silently parse as 0 and the
+// operator returns all zeros (issue #73, onnx/onnx#8111). Switch this thread to the "C" locale while
+// the environment is created; uselocale is thread-local, so the host app's global locale is untouched.
+//
+// Keep this unconditionally even after onnx ships the upstream fix: USE_SYSTEM_ONNXRUNTIME defaults to
+// ON, so the onnx version behind the plugin is not pinned by this repo, and the guard costs one
+// newlocale per process.
+class ScopedCLocale {
+public:
+  ScopedCLocale() : c_locale_(newlocale(LC_ALL_MASK, "C", (locale_t)0)) {
+    if (c_locale_ != (locale_t)0) {
+      previous_ = uselocale(c_locale_);
+    }
+  }
+  ~ScopedCLocale() {
+    // Restore only if this thread was actually switched, and free only what was actually allocated.
+    if (previous_ != (locale_t)0) {
+      uselocale(previous_);
+    }
+    if (c_locale_ != (locale_t)0) {
+      freelocale(c_locale_);
+    }
+  }
+
+private:
+  locale_t c_locale_;
+  locale_t previous_ = (locale_t)0;
+};
+
+Ort::Env createOrtEnv() {
+  ScopedCLocale locale_guard;
+  return Ort::Env(ORT_LOGGING_LEVEL_WARNING, "FlutterOnnxRuntime");
+}
+
+} // namespace
+
+SessionManager::SessionManager() : next_session_id_(1), env_(createOrtEnv()) {
   // Initialize ONNX Runtime environment in constructor
 }
 

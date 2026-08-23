@@ -10,6 +10,10 @@
 
 namespace flutter_onnxruntime {
 
+// No locale guard here, unlike linux/src/session_manager.cc (see its ScopedCLocale comment, issue #73): the Win32
+// Flutter runner does not call setlocale(LC_ALL, ""), so LC_NUMERIC stays "C" and ONNX operator function-body
+// constants parse correctly. Should a host app ever change the CRT locale, the fix here is
+// _configthreadlocale(_ENABLE_PER_THREAD_LOCALE) + setlocale, not the POSIX uselocale used on Linux.
 SessionManager::SessionManager() : next_session_id_(1), env_(ORT_LOGGING_LEVEL_WARNING, "FlutterOnnxRuntime") {
   // Initialize ONNX Runtime environment in constructor
 }

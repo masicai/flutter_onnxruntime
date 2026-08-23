@@ -286,17 +286,27 @@ if(${include_${PROJECT_NAME}_tests})
     # The plugin's exported API is not very useful for unit testing, so build the sources directly into the test binary
     # rather than using the shared library.
     add_executable(${TEST_RUNNER} test/flutter_onnxruntime_plugin_test.cc ${PLUGIN_SOURCES})
-    apply_standard_settings(${TEST_RUNNER})
-    target_include_directories(${TEST_RUNNER} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-    target_include_directories(${TEST_RUNNER} PRIVATE ${ONNXRUNTIME_INCLUDE_DIRS})
-    target_link_libraries(${TEST_RUNNER} PRIVATE flutter)
-    target_link_libraries(${TEST_RUNNER} PRIVATE PkgConfig::GTK)
-    target_link_libraries(${TEST_RUNNER} PRIVATE ${ONNXRUNTIME_LIBRARIES})
-    target_link_libraries(${TEST_RUNNER} PRIVATE gtest_main gmock)
+
+    # The issue #73 locale regression only reproduces in a process that has not yet created an Ort::Env, because the
+    # ONNX operator schemas holding the affected constants are registered once per process. A dedicated binary
+    # guarantees that in every run mode, including running the test executables directly.
+    set(LOCALE_TEST_RUNNER "${PROJECT_NAME}_locale_test")
+    add_executable(${LOCALE_TEST_RUNNER} test/session_manager_locale_test.cc ${PLUGIN_SOURCES})
+
+    foreach(TARGET ${TEST_RUNNER} ${LOCALE_TEST_RUNNER})
+      apply_standard_settings(${TARGET})
+      target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+      target_include_directories(${TARGET} PRIVATE ${ONNXRUNTIME_INCLUDE_DIRS})
+      target_link_libraries(${TARGET} PRIVATE flutter)
+      target_link_libraries(${TARGET} PRIVATE PkgConfig::GTK)
+      target_link_libraries(${TARGET} PRIVATE ${ONNXRUNTIME_LIBRARIES})
+      target_link_libraries(${TARGET} PRIVATE gtest_main gmock)
+    endforeach()
 
     # Enable automatic test discovery.
     include(GoogleTest)
     gtest_discover_tests(${TEST_RUNNER})
+    gtest_discover_tests(${LOCALE_TEST_RUNNER})
 
   endif() # CMake version check
 endif() # include_${PROJECT_NAME}_tests
