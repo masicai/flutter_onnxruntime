@@ -36,6 +36,10 @@
 // 3. The String Concat model is a similar version of Addition model but with string inputs and outputs
 //
 // 4. The Bool Not model is a simple model which performs Not operation on a 2D bool tensor
+//
+// 5. The HardSwish model is a single HardSwish op, used to guard issue #73: HardSwish's function body
+// is parsed from text with a locale-dependent float parse, so under a comma-decimal system locale its
+// constants can silently parse as 0 and the op returns all zeros. See linux/src/session_manager.cc.
 
 import 'dart:io';
 
@@ -1273,6 +1277,46 @@ void main() {
 
       final outputData = await output.asFlattenedList();
       expect(outputData, [false, true, true, false]);
+
+      // clean up
+      await input.dispose();
+      await output.dispose();
+    });
+  });
+
+  // Regression guard for issue #73. HardSwish's operator function body is parsed from its text form
+  // with a locale-dependent float parse, so under a comma-decimal system locale the unfixed plugin
+  // reads alpha = 1/6 as 0 and this model returns all zeros. The Linux CI job runs this suite under
+  // LC_ALL=de_DE.UTF-8, which is where that path is actually exercised (GTK adopts the system locale
+  // for C-level parsing); on the other platforms this guards against their runtimes starting to.
+  group('HardSwish Model Test', () {
+    late OnnxRuntime onnxRuntime;
+    late OrtSession session;
+
+    setUpAll(() async {
+      onnxRuntime = OnnxRuntime();
+      session = await onnxRuntime.createSessionFromAsset('assets/models/hardswish_model.onnx');
+    });
+
+    tearDownAll(() async {
+      await session.close();
+    });
+
+    testWidgets('HardSwish is correct under the host locale', (WidgetTester tester) async {
+      final input = await OrtValue.fromList([-4.0, -3.0, -1.0, -0.5, 0.0, 0.5, 1.0, 3.0], [1, 8]);
+
+      final outputs = await session.run({'x': input});
+      final output = outputs['y'];
+      expect(output!.dataType, OrtDataType.float32);
+      expect(output.shape, [1, 8]);
+
+      // HardSwish(x) = x * clamp(x / 6 + 0.5, 0, 1). The broken parse degrades that to
+      // x * clamp(0 * x + 0, 0, 1), i.e. zero for every element.
+      final expected = [0.0, 0.0, -1 / 3, -5 / 24, 0.0, 7 / 24, 2 / 3, 3.0];
+      final outputData = await output.asFlattenedList();
+      for (var i = 0; i < expected.length; i++) {
+        expect(outputData[i], closeTo(expected[i], 1e-5), reason: 'HardSwish mismatch at index $i (issue #73)');
+      }
 
       // clean up
       await input.dispose();
