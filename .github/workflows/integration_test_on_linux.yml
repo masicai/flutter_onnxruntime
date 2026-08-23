@@ -53,3 +53,18 @@ jobs:
           # Start a virtual display server (https://github.com/wang-bin/fvp/issues/212)
           sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
           DISPLAY=:99 flutter test integration_test/all_tests.dart -d linux
+
+      # The issue #73 regression is invisible under the C locale that CI and most developer machines
+      # run in, so generate a comma-decimal locale and require the test to actually exercise it.
+      - name: Generate a comma-decimal locale
+        run: |
+          sudo locale-gen de_DE.UTF-8
+          sudo update-locale
+
+      - name: Run native unit tests
+        env:
+          FLUTTER_ONNXRUNTIME_REQUIRE_COMMA_LOCALE: 1
+        run: |
+          cd example
+          flutter build linux --debug
+          ctest --test-dir build/linux/x64/debug/plugins/flutter_onnxruntime --output-on-failure
