@@ -1,3 +1,6 @@
+## 1.8.4
+* Fix HardSwish and other function-defined ONNX operators returning all zeros on Linux under comma-decimal system locales such as German and French (#73, upstream onnx/onnx#8111)
+
 ## 1.8.3
 * Fix App Store Connect validation errors (ITMS-90208) on iOS/macOS by repackaging ONNX Runtime as a library-format xcframework instead of framework-format (issue #71)
 
