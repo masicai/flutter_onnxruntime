@@ -22,14 +22,28 @@ allprojects {
 }
 
 apply plugin: "com.android.library"
-// AGP 9+ compiles Kotlin itself ("built-in Kotlin") unless the app opts out with
-// android.builtInKotlin=false. Applying the Kotlin Gradle Plugin on top of built-in
-// Kotlin is a fatal error, so only apply it where AGP does not compile Kotlin for us.
-def agpMajor = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')[0] as int
+
+// AGP 9+ compiles Kotlin itself ("built-in Kotlin"), and applying the Kotlin Gradle
+// Plugin (KGP) on top of it is a fatal error, so only apply KGP where AGP does not
+// compile Kotlin for us. An app on AGP 9 can opt back out with android.builtInKotlin=false.
+// The property is deliberately only honoured as an opt-OUT: AGP 8.13 accepts
+// android.builtInKotlin=true but still registers no `kotlin` extension, so opting in
+// there would break the compilerOptions block below.
+//
+// The literal `apply plugin: "kotlin-android"` below is load-bearing: Flutter's Gradle
+// tooling greps every plugin build file for exactly that syntax, and when it does not
+// find it, it applies KGP to this project itself (see
+// FlutterPluginUtils.detectApplyingKotlinGradlePlugin), which brings the fatal error
+// back. Do not rewrite it as pluginManager.apply("kotlin-android").
+def androidComponentsExt = project.extensions.findByName("androidComponents")
+def agpMajor = (androidComponentsExt != null
+        ? androidComponentsExt.pluginVersion.major
+        : com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize(".")[0] as int)
 def builtInKotlinProp = project.findProperty("android.builtInKotlin")
-def builtInKotlin = agpMajor >= 9 && (builtInKotlinProp == null || builtInKotlinProp.toString().equalsIgnoreCase("true"))
+def builtInKotlin = agpMajor >= 9 &&
+        (builtInKotlinProp == null || builtInKotlinProp.toString().equalsIgnoreCase("true"))
 if (!builtInKotlin) {
-    pluginManager.apply("kotlin-android")
+    apply plugin: "kotlin-android"
 }
 
 android {
@@ -52,7 +66,7 @@ android {
     }
 
     dependencies {
-        testImplementation("org.jetbrains.kotlin:kotlin-test")
+        testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
         testImplementation("org.mockito:mockito-core:5.0.0")
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
         implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.23.0'
