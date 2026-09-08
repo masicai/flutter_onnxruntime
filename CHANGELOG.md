@@ -1,3 +1,6 @@
+## 1.8.5
+* Support AGP 9 built-in Kotlin (#76)
+
 ## 1.8.4
 * Fix HardSwish and other function-defined ONNX operators returning all zeros on Linux under comma-decimal system locales such as German and French (#73, upstream onnx/onnx#8111)
 
