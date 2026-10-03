@@ -255,9 +255,6 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                                 "ACL" -> {
                                     ortSessionOptions.addACL(true)
                                 }
-                                "ARM_NN" -> {
-                                    ortSessionOptions.addArmNN(useArena)
-                                }
                                 "CORE_ML" -> {
                                     ortSessionOptions.addCoreML()
                                 }
