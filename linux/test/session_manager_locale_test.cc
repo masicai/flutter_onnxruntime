@@ -128,7 +128,7 @@ TEST(SessionManagerLocaleTest, HardSwishIsCorrectUnderCommaDecimalLocale) {
   ASSERT_EQ(std::string(localeconv()->decimal_point), ",")
       << "comma-decimal locale not active after SessionManager construction";
 
-  std::string session_id = session_manager.createSession(model_path.c_str(), nullptr);
+  std::string session_id = session_manager.createSession(model_path.c_str(), Ort::SessionOptions());
   ASSERT_TRUE(session_manager.hasSession(session_id));
 
   std::vector<float> input = {-4.0f, -3.0f, -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 3.0f};
