@@ -24,15 +24,19 @@ Flutter plugin for running ONNX models with the native ONNX Runtime, supporting 
   # Keep this version in lockstep with the `onnxruntime-swift-package-manager`
   # pin in flutter_onnxruntime/Package.swift so CocoaPods and SPM resolve the
   # same ORT (and the vendored internal headers stay matched).
-  # 1.23.0: last ORT without the KleidiAI conv memory regression of 1.24.x
-  # (microsoft/onnxruntime#29538); bump both pins together once ORT >= 1.28 ships.
-  s.dependency 'onnxruntime-objc', '1.23.0'
+  # 1.28.0: first ORT with the KleidiAI conv memory fix (microsoft/onnxruntime#28571)
+  # for the 1.24.x regression in #29538. Stay below 1.29, which turns on telemetry
+  # by default. Mobile ORT ships minor releases only, so there is no 1.28.x patch.
+  s.dependency 'onnxruntime-objc', '1.28.0'
 
   # Flutter.framework does not contain a i386 slice.
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
-    'HEADER_SEARCH_PATHS' => '"${PODS_ROOT}/onnxruntime-objc/objectivec" "${PODS_ROOT}/onnxruntime-objc/objectivec/include"'
+    'HEADER_SEARCH_PATHS' => '"${PODS_ROOT}/onnxruntime-objc/objectivec" "${PODS_ROOT}/onnxruntime-objc/objectivec/include"',
+    # Same as cxxLanguageStandard in Package.swift. CocoaPods defaults pod targets to gnu++14, and the ORT >= 1.28
+    # C API header declares noexcept function-pointer typedefs, which only compile as C++17.
+    'CLANG_CXX_LANGUAGE_STANDARD' => 'c++17'
   }
   s.swift_version = '5.0'
 

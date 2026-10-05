@@ -742,6 +742,45 @@ void main() {
         expect(e, isA<PlatformException>());
       }
     });
+
+    testWidgets('Create session with removed ArmNN provider', (WidgetTester tester) async {
+      await expectLater(
+        onnxRuntime.createSessionFromAsset(
+          'assets/models/addition_model.ort',
+          // ignore: deprecated_member_use
+          options: OrtSessionOptions(providers: [OrtProvider.ARM_NN]),
+        ),
+        throwsA(isA<PlatformException>().having((e) => e.code, 'code', 'INVALID_PROVIDER')),
+      );
+    });
+
+    testWidgets('Create session with session configs', (WidgetTester tester) async {
+      final session = await onnxRuntime.createSessionFromAsset(
+        'assets/models/addition_model.ort',
+        options: OrtSessionOptions(sessionConfigs: {'mlas.disable_kleidiai': '1'}),
+      );
+      final inputs = {
+        'A': await OrtValue.fromList([1.0, 2.0], [2]),
+        'B': await OrtValue.fromList([3.0, 4.0], [2]),
+      };
+      final outputs = await session.run(inputs);
+      expect(await outputs['C']!.asFlattenedList(), [4.0, 6.0]);
+      for (final value in [...inputs.values, ...outputs.values]) {
+        await value.dispose();
+      }
+      await session.close();
+    });
+
+    testWidgets('Session configs reach ONNX Runtime', (WidgetTester tester) async {
+      // Forcing the ONNX format onto an ORT-format model can only fail if the config entry is applied
+      await expectLater(
+        onnxRuntime.createSessionFromAsset(
+          'assets/models/addition_model.ort',
+          options: OrtSessionOptions(sessionConfigs: {'session.load_model_format': 'ONNX'}),
+        ),
+        throwsA(isA<PlatformException>()),
+      );
+    });
   });
 
   group('Session Info Tests', () {

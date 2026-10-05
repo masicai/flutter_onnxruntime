@@ -22,7 +22,14 @@ if(USE_SYSTEM_ONNXRUNTIME)
   # Try to find ONNX Runtime using pkg-config
   find_package(PkgConfig)
   if(PkgConfig_FOUND)
-    pkg_check_modules(ONNXRUNTIME onnxruntime)
+    # Not the ONNXRUNTIME prefix: pkg_check_modules clears <prefix>_VERSION even when the module is not found, which
+    # would wipe an ONNXRUNTIME_VERSION override set by the app.
+    pkg_check_modules(ONNXRUNTIME_PC onnxruntime)
+    if(ONNXRUNTIME_PC_FOUND)
+      set(ONNXRUNTIME_FOUND TRUE)
+      set(ONNXRUNTIME_LIBRARIES ${ONNXRUNTIME_PC_LIBRARIES})
+      set(ONNXRUNTIME_INCLUDE_DIRS ${ONNXRUNTIME_PC_INCLUDE_DIRS})
+    endif()
   endif()
 
   # If pkg-config didn't find it, try to find it manually
@@ -66,18 +73,18 @@ endif()
 if(NOT USE_SYSTEM_ONNXRUNTIME)
   include(FetchContent)
 
-  # Set ONNX Runtime version - make sure this is defined Only set if not already defined, to allow the parent project to
-  # override it
-  if(NOT DEFINED ONNXRUNTIME_VERSION)
-    set(ONNXRUNTIME_VERSION
-        "1.22.0"
-        CACHE STRING "ONNX Runtime version to use")
+  # ONNX Runtime version to download. The app can override it by setting ONNXRUNTIME_VERSION before the plugins are
+  # added. The default is deliberately not a cache variable, so existing build directories pick up a new default without
+  # `flutter clean`; plugin versions up to 1.8.5 cached theirs, so drop that stale entry.
+  get_property(
+    ONNXRUNTIME_VERSION_HELP
+    CACHE ONNXRUNTIME_VERSION
+    PROPERTY HELPSTRING)
+  if(ONNXRUNTIME_VERSION_HELP STREQUAL "ONNX Runtime version to use")
+    unset(ONNXRUNTIME_VERSION CACHE)
   endif()
-
-  # Check if version is not empty
   if("${ONNXRUNTIME_VERSION}" STREQUAL "")
-    set(ONNXRUNTIME_VERSION "1.22.0")
-    message(STATUS "ONNX Runtime version was empty, defaulting to 1.22.0")
+    set(ONNXRUNTIME_VERSION "1.28.3")
   endif()
 
   # Debug output
@@ -97,7 +104,7 @@ if(NOT USE_SYSTEM_ONNXRUNTIME)
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
   endif()
 
-  # Set download URL with correct naming pattern for 1.22.0 Make sure all parts of the version are included
+  # Set download URL with the release asset naming pattern
   message(STATUS "Using ONNX Runtime version: ${ONNXRUNTIME_VERSION}")
   set(ONNXRUNTIME_URL
       "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-linux-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}.tgz"

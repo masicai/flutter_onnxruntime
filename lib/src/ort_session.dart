@@ -100,8 +100,19 @@ class OrtSessionOptions {
   final bool? useArena;
   // set the device id for the session, default is 0
   final int? deviceId;
+  // session config entries passed as-is to ONNX Runtime's AddSessionConfigEntry, for example
+  // {'mlas.disable_kleidiai': '1'}. See onnxruntime_session_options_config_keys.h for the available keys:
+  // https://github.com/microsoft/onnxruntime/blob/main/include/onnxruntime/core/session/onnxruntime_session_options_config_keys.h
+  final Map<String, String>? sessionConfigs;
 
-  OrtSessionOptions({this.intraOpNumThreads, this.interOpNumThreads, this.providers, this.useArena, this.deviceId});
+  OrtSessionOptions({
+    this.intraOpNumThreads,
+    this.interOpNumThreads,
+    this.providers,
+    this.useArena,
+    this.deviceId,
+    this.sessionConfigs,
+  });
 
   Map<String, dynamic> toMap() {
     return {
@@ -110,6 +121,7 @@ class OrtSessionOptions {
       if (providers != null && providers!.isNotEmpty) 'providers': providers!.map((p) => p.name).toList(),
       if (useArena != null) 'useArena': useArena,
       if (deviceId != null) 'deviceId': deviceId,
+      if (sessionConfigs != null && sessionConfigs!.isNotEmpty) 'sessionConfigs': sessionConfigs,
     };
   }
 }

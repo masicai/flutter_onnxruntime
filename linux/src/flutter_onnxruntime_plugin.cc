@@ -219,6 +219,20 @@ static FlMethodResponse *create_session(FlutterOnnxruntimePlugin *self, FlValue 
       session_options.SetInterOpNumThreads(fl_value_get_int(inter_threads_val->second));
     }
 
+    // Pass session config entries (e.g. "mlas.disable_kleidiai") through to ONNX Runtime
+    auto session_configs_val = options_map.find("sessionConfigs");
+    if (session_configs_val != options_map.end()) {
+      try {
+        for (const auto &[key, value] : fl_value_to_map(session_configs_val->second)) {
+          if (fl_value_get_type(value) == FL_VALUE_TYPE_STRING) {
+            session_options.AddConfigEntry(key.c_str(), fl_value_get_string(value));
+          }
+        }
+      } catch (const Ort::Exception &e) {
+        return FL_METHOD_RESPONSE(fl_method_error_response_new("SESSION_OPTIONS_ERROR", e.what(), nullptr));
+      }
+    }
+
     // get the device id, if not provided, set to 0
     int device_id = 0;
     auto device_id_val = options_map.find("deviceId");

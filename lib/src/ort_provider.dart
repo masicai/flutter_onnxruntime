@@ -12,6 +12,7 @@
 /// https://onnxruntime.ai/docs/api/java/ai/onnxruntime/OrtProvider.html
 enum OrtProvider {
   ACL,
+  @Deprecated('The ArmNN execution provider was removed in ONNX Runtime 1.25; session creation with it now fails')
   ARM_NN,
   AZURE,
   CORE_ML,

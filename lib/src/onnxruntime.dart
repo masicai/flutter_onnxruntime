@@ -100,15 +100,11 @@ class OnnxRuntime {
 
   /// Get the available providers
   ///
-  /// Returns a list of the available providers
+  /// Returns a list of the available providers. Provider names reported by the native runtime that match no
+  /// [OrtProvider] value (e.g. `WEBGPU` from the ONNX Runtime 1.28 Android package) are left out.
   Future<List<OrtProvider>> getAvailableProviders() async {
     final providers = await FlutterOnnxruntimePlatform.instance.getAvailableProviders();
-    return providers.map((p) {
-      final provider = OrtProvider.values.firstWhere(
-        (e) => e.name == p,
-        orElse: () => throw ArgumentError('Provider $p is not a valid OrtProvider.'),
-      );
-      return provider;
-    }).toList();
+    final providersByName = OrtProvider.values.asNameMap();
+    return providers.map((p) => providersByName[p]).whereType<OrtProvider>().toList();
   }
 }

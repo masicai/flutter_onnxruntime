@@ -230,6 +230,12 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                             ortSessionOptions.setInterOpNumThreads((sessionOptions["interOpNumThreads"] as Number).toInt())
                         }
 
+                        // pass session config entries (e.g. "mlas.disable_kleidiai") through to ONNX Runtime
+                        val sessionConfigs = sessionOptions["sessionConfigs"] as? Map<*, *>
+                        sessionConfigs?.forEach { (key, value) ->
+                            ortSessionOptions.addConfigEntry(key.toString(), value.toString())
+                        }
+
                         // get list of providers, default is empty list
                         var providers = emptyList<String>()
                         if (sessionOptions.containsKey("providers")) {
@@ -256,7 +262,12 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                                     ortSessionOptions.addACL(true)
                                 }
                                 "ARM_NN" -> {
-                                    ortSessionOptions.addArmNN(useArena)
+                                    result.error(
+                                        "INVALID_PROVIDER",
+                                        "Provider ARM_NN is not supported: the ArmNN execution provider was removed in ONNX Runtime 1.25",
+                                        null,
+                                    )
+                                    return
                                 }
                                 "CORE_ML" -> {
                                     ortSessionOptions.addCoreML()
