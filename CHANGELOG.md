@@ -1,3 +1,9 @@
+## 1.9.0
+* Upgrade ONNX Runtime to 1.28.x across the platforms
+* Allow passing session config entries to ONNX Runtime
+* Fix session option issues in Linux, Windows and Web
+* Deprecate the ArmNN execution provider as being removed in ORT 1.25.0
+
 ## 1.8.5
 * Support AGP 9 built-in Kotlin (#76)
 
