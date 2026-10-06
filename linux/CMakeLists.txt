@@ -74,15 +74,8 @@ if(NOT USE_SYSTEM_ONNXRUNTIME)
   include(FetchContent)
 
   # ONNX Runtime version to download. The app can override it by setting ONNXRUNTIME_VERSION before the plugins are
-  # added. The default is deliberately not a cache variable, so existing build directories pick up a new default without
-  # `flutter clean`; plugin versions up to 1.8.5 cached theirs, so drop that stale entry.
-  get_property(
-    ONNXRUNTIME_VERSION_HELP
-    CACHE ONNXRUNTIME_VERSION
-    PROPERTY HELPSTRING)
-  if(ONNXRUNTIME_VERSION_HELP STREQUAL "ONNX Runtime version to use")
-    unset(ONNXRUNTIME_VERSION CACHE)
-  endif()
+  # added. The default is deliberately not a cache variable, so a new default in a later plugin version takes effect
+  # without `flutter clean`.
   if("${ONNXRUNTIME_VERSION}" STREQUAL "")
     set(ONNXRUNTIME_VERSION "1.28.3")
   endif()

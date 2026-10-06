@@ -183,6 +183,16 @@ flutter config --enable-swift-package-manager
 
 Both install paths ship the same ONNX Runtime version and behave identically. CocoaPods remains fully supported and is used automatically when the flag is off or on older Flutter versions.
 
+### Linux and Windows
+
+The build downloads ONNX Runtime 1.28.3 from the official GitHub release. To use another version, set `ONNXRUNTIME_VERSION` as a plain variable in your app's `linux/CMakeLists.txt` or `windows/CMakeLists.txt`, anywhere before the `include(flutter/generated_plugins.cmake)` line:
+
+```cmake
+set(ONNXRUNTIME_VERSION "1.22.0")
+```
+
+Passing `-DONNXRUNTIME_VERSION=1.22.0` to CMake works too. With `set(... CACHE ...)` instead, changing the version later needs `flutter clean`, because CMake never overwrites an existing cache entry.
+
 
 ## 🛠️ Troubleshooting
 
