@@ -29,6 +29,16 @@ class OnnxRuntime {
     return OrtSession.fromMap(result);
   }
 
+  /// Error codes the platforms return for session options, providers or the environment, before the model file is read.
+  /// Load failures are not listed because they come back under different codes per platform (ORT_ERROR,
+  /// SESSION_CREATION_FAILED, SESSION_CREATION_ERROR, PLUGIN_ERROR), and every one of them should stay retryable.
+  static const _errorCodesBeforeModelLoad = {
+    'SESSION_OPTIONS_ERROR',
+    'INVALID_PROVIDER',
+    'PROVIDER_ERROR',
+    'ENV_NOT_INITIALIZED',
+  };
+
   /// Create an ONNX Runtime session from an asset model file
   ///
   /// This will extract the asset to a temporary file and use that path
@@ -58,7 +68,7 @@ class OnnxRuntime {
 
       try {
         return await createSession(filePath, options: options);
-      } catch (_) {
+      } catch (e) {
         // A cached model can still be truncated/corrupt (interrupted extraction
         // by an older non-atomic build, partial cache eviction). Such a file
         // "exists", so it would be reused and keep failing to load forever
@@ -66,7 +76,9 @@ class OnnxRuntime {
         // asset and retry once so the install self-heals. Skip the retry when
         // the asset was extracted in this very call: those bytes are already
         // intact, so retrying identical bytes would only repeat the failure.
-        if (!wasCached) rethrow;
+        // Also skip it for errors raised before the model file is read, which
+        // new bytes cannot fix.
+        if (!wasCached || (e is PlatformException && _errorCodesBeforeModelLoad.contains(e.code))) rethrow;
         await _extractAsset(assetKey, file);
         return await createSession(filePath, options: options);
       }

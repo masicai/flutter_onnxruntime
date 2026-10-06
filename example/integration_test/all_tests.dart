@@ -788,6 +788,21 @@ void main() {
         throwsA(isA<PlatformException>()),
       );
     });
+
+    testWidgets('Invalid session config entry fails with SESSION_OPTIONS_ERROR', (WidgetTester tester) async {
+      // ONNX Runtime rejects an empty config key. Web reports every session creation failure under one generic code
+      await expectLater(
+        onnxRuntime.createSessionFromAsset(
+          'assets/models/addition_model.ort',
+          options: OrtSessionOptions(sessionConfigs: {'': '1'}),
+        ),
+        throwsA(
+          kIsWeb
+              ? isA<PlatformException>()
+              : isA<PlatformException>().having((e) => e.code, 'code', 'SESSION_OPTIONS_ERROR'),
+        ),
+      );
+    });
   });
 
   group('Session Info Tests', () {

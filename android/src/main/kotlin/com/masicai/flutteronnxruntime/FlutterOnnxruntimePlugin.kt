@@ -211,7 +211,16 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                         // pass session config entries (e.g. "mlas.disable_kleidiai") through to ONNX Runtime
                         val sessionConfigs = sessionOptions["sessionConfigs"] as? Map<*, *>
                         sessionConfigs?.forEach { (key, value) ->
-                            ortSessionOptions.addConfigEntry(key.toString(), value.toString())
+                            try {
+                                ortSessionOptions.addConfigEntry(key.toString(), value.toString())
+                            } catch (e: OrtException) {
+                                result.error(
+                                    "SESSION_OPTIONS_ERROR",
+                                    "Failed to add session config entry $key: ${e.message}",
+                                    null,
+                                )
+                                return
+                            }
                         }
 
                         // get list of providers, default is empty list
@@ -235,56 +244,63 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                         // loop through the providers and add them to the ortSessionOptions
                         for (provider in providers) {
                             // add providers with default parameters
-                            when (provider) {
-                                "ACL" -> {
-                                    ortSessionOptions.addACL(true)
+                            try {
+                                when (provider) {
+                                    "ACL" -> {
+                                        ortSessionOptions.addACL(true)
+                                    }
+                                    "ARM_NN" -> {
+                                        result.error(
+                                            "INVALID_PROVIDER",
+                                            "Provider ARM_NN is not supported: the ArmNN execution provider was removed in " +
+                                                "ONNX Runtime 1.25",
+                                            null,
+                                        )
+                                        return
+                                    }
+                                    "CORE_ML" -> {
+                                        ortSessionOptions.addCoreML()
+                                    }
+                                    "CPU" -> {
+                                        ortSessionOptions.addCPU(useArena)
+                                    }
+                                    "CUDA" -> {
+                                        ortSessionOptions.addCUDA(deviceId)
+                                    }
+                                    "DIRECT_ML" -> {
+                                        ortSessionOptions.addDirectML(deviceId)
+                                    }
+                                    "DNNL" -> {
+                                        ortSessionOptions.addDnnl(useArena)
+                                    }
+                                    "NNAPI" -> {
+                                        ortSessionOptions.addNnapi()
+                                    }
+                                    "OPEN_VINO" -> {
+                                        ortSessionOptions.addOpenVINO(deviceId.toString())
+                                    }
+                                    "QNN" -> {
+                                        ortSessionOptions.addQnn(mapOf())
+                                    }
+                                    "ROCM" -> {
+                                        ortSessionOptions.addROCM(deviceId)
+                                    }
+                                    "TENSOR_RT" -> {
+                                        ortSessionOptions.addTensorrt(OrtTensorRTProviderOptions(deviceId))
+                                    }
+                                    "XNNPACK" -> {
+                                        // use an empty map as the parameter
+                                        ortSessionOptions.addXnnpack(mapOf())
+                                    }
+                                    else -> {
+                                        result.error("INVALID_PROVIDER", "Provider $provider is not supported", null)
+                                        return
+                                    }
                                 }
-                                "ARM_NN" -> {
-                                    result.error(
-                                        "INVALID_PROVIDER",
-                                        "Provider ARM_NN is not supported: the ArmNN execution provider was removed in ONNX Runtime 1.25",
-                                        null,
-                                    )
-                                    return
-                                }
-                                "CORE_ML" -> {
-                                    ortSessionOptions.addCoreML()
-                                }
-                                "CPU" -> {
-                                    ortSessionOptions.addCPU(useArena)
-                                }
-                                "CUDA" -> {
-                                    ortSessionOptions.addCUDA(deviceId)
-                                }
-                                "DIRECT_ML" -> {
-                                    ortSessionOptions.addDirectML(deviceId)
-                                }
-                                "DNNL" -> {
-                                    ortSessionOptions.addDnnl(useArena)
-                                }
-                                "NNAPI" -> {
-                                    ortSessionOptions.addNnapi()
-                                }
-                                "OPEN_VINO" -> {
-                                    ortSessionOptions.addOpenVINO(deviceId.toString())
-                                }
-                                "QNN" -> {
-                                    ortSessionOptions.addQnn(mapOf())
-                                }
-                                "ROCM" -> {
-                                    ortSessionOptions.addROCM(deviceId)
-                                }
-                                "TENSOR_RT" -> {
-                                    ortSessionOptions.addTensorrt(OrtTensorRTProviderOptions(deviceId))
-                                }
-                                "XNNPACK" -> {
-                                    // use an empty map as the parameter
-                                    ortSessionOptions.addXnnpack(mapOf())
-                                }
-                                else -> {
-                                    result.error("INVALID_PROVIDER", "Provider $provider is not supported", null)
-                                    return
-                                }
+                            } catch (e: OrtException) {
+                                // same code as Linux and Windows, so createSessionFromAsset does not re-extract the model for it
+                                result.error("PROVIDER_ERROR", "Failed to add provider $provider: ${e.message}", null)
+                                return
                             }
                         }
 
