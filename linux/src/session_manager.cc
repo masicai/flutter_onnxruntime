@@ -69,7 +69,7 @@ SessionManager::~SessionManager() {
   sessions_.clear();
 }
 
-std::string SessionManager::createSession(const char *model_path, void *options) {
+std::string SessionManager::createSession(const char *model_path, const Ort::SessionOptions &session_options) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   ScopedCLocale locale_guard;
@@ -78,21 +78,6 @@ std::string SessionManager::createSession(const char *model_path, void *options)
   std::string session_id = generateSessionId();
 
   try {
-    // Create session options
-    Ort::SessionOptions session_options;
-
-    // If options are provided, use them
-    if (options != nullptr) {
-      // Cast the void* to the correct type
-      Ort::SessionOptions *provided_options = static_cast<Ort::SessionOptions *>(options);
-
-      // Directly use the provided options
-      session_options = std::move(*provided_options);
-    } else {
-      // Configure default execution providers
-      // Default to CPU execution provider
-    }
-
     // Create a new session
     std::unique_ptr<Ort::Session> ort_session = std::make_unique<Ort::Session>(env_, model_path, session_options);
 

@@ -51,18 +51,11 @@ endif()
 if(NOT USE_SYSTEM_ONNXRUNTIME)
   include(FetchContent)
 
-  # Set ONNX Runtime version - make sure this is defined Only set if not already defined, to allow the parent project to
-  # override it
-  if(NOT DEFINED ONNXRUNTIME_VERSION)
-    set(ONNXRUNTIME_VERSION
-        "1.22.0"
-        CACHE STRING "ONNX Runtime version to use")
-  endif()
-
-  # Check if version is not empty
+  # ONNX Runtime version to download. The app can override it by setting ONNXRUNTIME_VERSION before the plugins are
+  # added. The default is deliberately not a cache variable, so a new default in a later plugin version takes effect
+  # without `flutter clean`.
   if("${ONNXRUNTIME_VERSION}" STREQUAL "")
-    set(ONNXRUNTIME_VERSION "1.22.0")
-    message(STATUS "ONNX Runtime version was empty, defaulting to 1.22.0")
+    set(ONNXRUNTIME_VERSION "1.28.3")
   endif()
 
   # Debug output

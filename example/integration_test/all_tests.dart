@@ -742,6 +742,67 @@ void main() {
         expect(e, isA<PlatformException>());
       }
     });
+
+    testWidgets('Create session with removed ArmNN provider', (WidgetTester tester) async {
+      await expectLater(
+        onnxRuntime.createSessionFromAsset(
+          'assets/models/addition_model.ort',
+          // ignore: deprecated_member_use
+          options: OrtSessionOptions(providers: [OrtProvider.ARM_NN]),
+        ),
+        throwsA(isA<PlatformException>().having((e) => e.code, 'code', 'INVALID_PROVIDER')),
+      );
+    });
+
+    // Options that must leave the model working
+    final workingOptions = {
+      'session configs': OrtSessionOptions(sessionConfigs: {'mlas.disable_kleidiai': '1'}),
+      'the CPU memory arena disabled': OrtSessionOptions(useArena: false),
+    };
+    for (final entry in workingOptions.entries) {
+      testWidgets('Create session with ${entry.key}', (WidgetTester tester) async {
+        final session = await onnxRuntime.createSessionFromAsset(
+          'assets/models/addition_model.ort',
+          options: entry.value,
+        );
+        final inputs = {
+          'A': await OrtValue.fromList([1.0, 2.0], [2]),
+          'B': await OrtValue.fromList([3.0, 4.0], [2]),
+        };
+        final outputs = await session.run(inputs);
+        expect(await outputs['C']!.asFlattenedList(), [4.0, 6.0]);
+        for (final value in [...inputs.values, ...outputs.values]) {
+          await value.dispose();
+        }
+        await session.close();
+      });
+    }
+
+    testWidgets('Session configs reach ONNX Runtime', (WidgetTester tester) async {
+      // Forcing the ONNX format onto an ORT-format model can only fail if the config entry is applied
+      await expectLater(
+        onnxRuntime.createSessionFromAsset(
+          'assets/models/addition_model.ort',
+          options: OrtSessionOptions(sessionConfigs: {'session.load_model_format': 'ONNX'}),
+        ),
+        throwsA(isA<PlatformException>()),
+      );
+    });
+
+    testWidgets('Invalid session config entry fails with SESSION_OPTIONS_ERROR', (WidgetTester tester) async {
+      // ONNX Runtime rejects an empty config key. Web reports every session creation failure under one generic code
+      await expectLater(
+        onnxRuntime.createSessionFromAsset(
+          'assets/models/addition_model.ort',
+          options: OrtSessionOptions(sessionConfigs: {'': '1'}),
+        ),
+        throwsA(
+          kIsWeb
+              ? isA<PlatformException>()
+              : isA<PlatformException>().having((e) => e.code, 'code', 'SESSION_OPTIONS_ERROR'),
+        ),
+      );
+    });
   });
 
   group('Session Info Tests', () {

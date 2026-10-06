@@ -450,6 +450,29 @@ void FlutterOnnxruntimePlugin::HandleCreateSession(
         session_options.SetInterOpNumThreads(std::get<int32_t>(inter_threads_it->second));
       }
 
+      // Pass session config entries (e.g. "mlas.disable_kleidiai") through to ONNX Runtime
+      auto session_configs_it = options_map.find(flutter::EncodableValue("sessionConfigs"));
+      if (session_configs_it != options_map.end() &&
+          std::holds_alternative<flutter::EncodableMap>(session_configs_it->second)) {
+        try {
+          for (const auto &[key, value] : std::get<flutter::EncodableMap>(session_configs_it->second)) {
+            if (std::holds_alternative<std::string>(key) && std::holds_alternative<std::string>(value)) {
+              session_options.AddConfigEntry(std::get<std::string>(key).c_str(), std::get<std::string>(value).c_str());
+            }
+          }
+        } catch (const Ort::Exception &e) {
+          result->Error("SESSION_OPTIONS_ERROR", e.what(), nullptr);
+          return;
+        }
+      }
+
+      // The CPU memory arena is on by default in ONNX Runtime, so only an explicit false changes anything
+      auto use_arena_it = options_map.find(flutter::EncodableValue("useArena"));
+      if (use_arena_it != options_map.end() && std::holds_alternative<bool>(use_arena_it->second) &&
+          !std::get<bool>(use_arena_it->second)) {
+        session_options.DisableCpuMemArena();
+      }
+
       // Get the device ID, if not provided, set to 0
       int device_id = 0;
       auto device_id_it = options_map.find(flutter::EncodableValue("deviceId"));

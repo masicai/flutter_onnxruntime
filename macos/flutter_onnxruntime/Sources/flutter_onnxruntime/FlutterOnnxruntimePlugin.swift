@@ -150,6 +150,19 @@ public class FlutterOnnxruntimePlugin: NSObject, FlutterPlugin {
           }
         }
 
+        // pass session config entries (e.g. "mlas.disable_kleidiai") through to ONNX Runtime
+        if let sessionConfigs = options["sessionConfigs"] as? [String: String] {
+          for (key, value) in sessionConfigs {
+            do {
+              try sessionOptions.addConfigEntry(withKey: key, value: value)
+            } catch {
+              result(FlutterError(code: "SESSION_OPTIONS_ERROR",
+                message: "Failed to add session config entry \(key): \(error.localizedDescription)", details: nil))
+              return
+            }
+          }
+        }
+
         // Note: 14/04/25 interOpNumThreads is not supported in onnxruntime-objc
         // if let interOpNumThreads = options["interOpNumThreads"] as? Int {
         //   try sessionOptions.setInterOpNumThreads(Int32(interOpNumThreads))

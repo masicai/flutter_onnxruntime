@@ -14,12 +14,12 @@ let package = Package(
   dependencies: [
     // Pinned exactly so the vendored internal headers in
     // Sources/flutter_onnxruntime_objc/vendor/ always match the resolved package.
-    // masicai fork pinning ORT 1.23.0: Microsoft's SPM repo has no 1.23.x tag, and
-    // ORT 1.24.x has a KleidiAI conv memory regression on SME-capable ARM64 devices
-    // (microsoft/onnxruntime#29538). Point back to
-    // https://github.com/microsoft/onnxruntime-swift-package-manager once a release
-    // ships with microsoft/onnxruntime#28571 (expected ORT 1.28) and has an SPM tag.
-    .package(url: "https://github.com/masicai/onnxruntime-swift-package-manager", exact: "1.23.1")
+    // masicai fork pinning ORT 1.28.0 (fork tag 1.28.0). Microsoft's SPM repo has
+    // no 1.28.x tag, and its framework-format binary gets embedded by Xcode, which
+    // App Store Connect rejects (ITMS-90208, issue #71). The fork ships the same
+    // binary repackaged as a library-format xcframework, so keep it until upstream
+    // fixes the artifact format.
+    .package(url: "https://github.com/masicai/onnxruntime-swift-package-manager", exact: "1.28.0")
   ],
   targets: [
     // Swift target. `import Flutter` resolves implicitly through the

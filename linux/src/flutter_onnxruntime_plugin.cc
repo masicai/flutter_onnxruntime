@@ -72,6 +72,7 @@ static std::string mapProviderNameToEnumName(const std::string &providerName) {
       {"CPUExecutionProvider", "CPU"},
       {"CUDAExecutionProvider", "CUDA"},
       {"TensorrtExecutionProvider", "TENSOR_RT"},
+      {"AzureExecutionProvider", "AZURE"},
       {"MIGraphXExecutionProvider", "MIGRAPHX"},
       {"ROCMExecutionProvider", "ROCM"},
       {"CoreMLExecutionProvider", "CORE_ML"},
@@ -217,6 +218,27 @@ static FlMethodResponse *create_session(FlutterOnnxruntimePlugin *self, FlValue 
     auto inter_threads_val = options_map.find("interOpNumThreads");
     if (inter_threads_val != options_map.end() && fl_value_get_type(inter_threads_val->second) == FL_VALUE_TYPE_INT) {
       session_options.SetInterOpNumThreads(fl_value_get_int(inter_threads_val->second));
+    }
+
+    // Pass session config entries (e.g. "mlas.disable_kleidiai") through to ONNX Runtime
+    auto session_configs_val = options_map.find("sessionConfigs");
+    if (session_configs_val != options_map.end()) {
+      try {
+        for (const auto &[key, value] : fl_value_to_map(session_configs_val->second)) {
+          if (fl_value_get_type(value) == FL_VALUE_TYPE_STRING) {
+            session_options.AddConfigEntry(key.c_str(), fl_value_get_string(value));
+          }
+        }
+      } catch (const Ort::Exception &e) {
+        return FL_METHOD_RESPONSE(fl_method_error_response_new("SESSION_OPTIONS_ERROR", e.what(), nullptr));
+      }
+    }
+
+    // The CPU memory arena is on by default in ONNX Runtime, so only an explicit false changes anything
+    auto use_arena_val = options_map.find("useArena");
+    if (use_arena_val != options_map.end() && fl_value_get_type(use_arena_val->second) == FL_VALUE_TYPE_BOOL &&
+        !fl_value_get_bool(use_arena_val->second)) {
+      session_options.DisableCpuMemArena();
     }
 
     // get the device id, if not provided, set to 0

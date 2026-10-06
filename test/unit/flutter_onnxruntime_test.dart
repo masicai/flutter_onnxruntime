@@ -106,8 +106,9 @@ class MockFlutterOnnxruntimePlatform with MockPlatformInterfaceMixin implements 
   @override
   Future<void> releaseOrtValue(String valueId) => Future.value();
 
+  // WEBGPU is how the ONNX Runtime 1.28 Android package names its WebGPU provider; it matches no OrtProvider value
   @override
-  Future<List<String>> getAvailableProviders() => Future.value(['CPU']);
+  Future<List<String>> getAvailableProviders() => Future.value(['CPU', 'WEBGPU']);
 }
 
 void main() {
@@ -161,6 +162,10 @@ void main() {
       expect(providers, isNotNull);
       expect(providers, isA<List<OrtProvider>>());
       expect(providers, contains(OrtProvider.CPU));
+    });
+
+    test('getAvailableProviders skips providers without an OrtProvider value', () async {
+      expect(await onnxRuntime.getAvailableProviders(), [OrtProvider.CPU]);
     });
   });
 

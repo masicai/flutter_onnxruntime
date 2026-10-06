@@ -561,6 +561,14 @@ void main() {
       expect(map.containsKey('providers'), false);
     });
 
+    test('session configs are included in map only when non-empty', () {
+      final options = OrtSessionOptions(sessionConfigs: {'mlas.disable_kleidiai': '1'});
+      expect(options.toMap()['sessionConfigs'], {'mlas.disable_kleidiai': '1'});
+
+      expect(OrtSessionOptions(sessionConfigs: {}).toMap().containsKey('sessionConfigs'), false);
+      expect(OrtSessionOptions().toMap().containsKey('sessionConfigs'), false);
+    });
+
     test('options affect session creation', () async {
       // Create a specialized tracking mock platform
       final optionsMock = SessionOptionsMock();

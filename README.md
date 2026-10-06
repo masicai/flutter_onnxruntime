@@ -10,7 +10,15 @@
 
 Native Wrapper Flutter Plugin for ONNX Runtime
 
-*Current supported ONNX Runtime version:* **1.23.0**
+*Supported ONNX Runtime versions:*
+
+| Platform | ONNX Runtime | Source |
+|----------|:------------:|--------|
+| Android | **1.28.0** | Maven `com.microsoft.onnxruntime:onnxruntime-android` |
+| iOS, macOS | **1.28.0** | CocoaPods `onnxruntime-objc`, or Swift Package Manager |
+| Linux, Windows | **1.28.3** | Official GitHub release, downloaded at build time|
+| Web | chosen by your app | `onnxruntime-web` script tag in `web/index.html`|
+
 
 *Note:* For Android build, you need to upgrade your `flutter_onnxruntime` to version `>=1.5.1` to satisfy the [16 KB Google Play compatibility requirement](https://android-developers.googleblog.com/2025/05/prepare-play-apps-for-devices-with-16kb-page-size.html).
 
@@ -174,6 +182,16 @@ flutter config --enable-swift-package-manager
 ```
 
 Both install paths ship the same ONNX Runtime version and behave identically. CocoaPods remains fully supported and is used automatically when the flag is off or on older Flutter versions.
+
+### Linux and Windows
+
+The build downloads ONNX Runtime 1.28.3 from the official GitHub release. To use another version, set `ONNXRUNTIME_VERSION` as a plain variable in your app's `linux/CMakeLists.txt` or `windows/CMakeLists.txt`, anywhere before the `include(flutter/generated_plugins.cmake)` line:
+
+```cmake
+set(ONNXRUNTIME_VERSION "1.22.0")
+```
+
+Passing `-DONNXRUNTIME_VERSION=1.22.0` to CMake works too. With `set(... CACHE ...)` instead, changing the version later needs `flutter clean`, because CMake never overwrites an existing cache entry.
 
 
 ## 🛠️ Troubleshooting

@@ -109,6 +109,9 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       // Return the required information
       return {'sessionId': sessionId, 'inputNames': inputNames, 'outputNames': outputNames};
     } catch (e) {
+      if (e is PlatformException) {
+        rethrow;
+      }
       throw PlatformException(code: 'PLUGIN_ERROR', message: 'Failed to create ONNX session: $e', details: null);
     }
   }
@@ -160,6 +163,15 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
       // Handle graph optimization level
       if (options.containsKey('graphOptimizationLevel')) {
         jsOptions.setProperty('graphOptimizationLevel'.toJS, options['graphOptimizationLevel']);
+      }
+
+      if (options.containsKey('useArena')) {
+        jsOptions.setProperty('enableCpuMemArena'.toJS, (options['useArena'] as bool).toJS);
+      }
+
+      // Session config entries go through `extra`, which onnxruntime-web passes key by key to AddSessionConfigEntry
+      if (options.containsKey('sessionConfigs')) {
+        jsOptions.setProperty('extra'.toJS, (options['sessionConfigs'] as Map<String, String>).jsify());
       }
 
       // Add more options as needed

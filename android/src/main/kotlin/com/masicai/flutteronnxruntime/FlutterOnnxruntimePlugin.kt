@@ -163,28 +163,6 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
         }
     }
 
-    /**
-     * Map provider name to enum name
-     */
-    private fun mapProviderNameToEnumName(providerName: String): String {
-        return when (providerName) {
-            "ACL" -> "ACL"
-            "ARM_NN" -> "ARM_NN"
-            "CORE_ML" -> "CORE_ML"
-            "CPU" -> "CPU"
-            "CUDA" -> "CUDA"
-            "DIRECT_ML" -> "DIRECT_ML"
-            "DNNL" -> "DNNL"
-            "NNAPI" -> "NNAPI"
-            "OPEN_VINO" -> "OPEN_VINO"
-            "QNN" -> "QNN"
-            "ROCM" -> "ROCM"
-            "TENSOR_RT" -> "TENSOR_RT"
-            "XNNPACK" -> "XNNPACK"
-            else -> providerName
-        }
-    }
-
     override fun onAttachedToEngine(
         @NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding,
     ) {
@@ -230,6 +208,21 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                             ortSessionOptions.setInterOpNumThreads((sessionOptions["interOpNumThreads"] as Number).toInt())
                         }
 
+                        // pass session config entries (e.g. "mlas.disable_kleidiai") through to ONNX Runtime
+                        val sessionConfigs = sessionOptions["sessionConfigs"] as? Map<*, *>
+                        sessionConfigs?.forEach { (key, value) ->
+                            try {
+                                ortSessionOptions.addConfigEntry(key.toString(), value.toString())
+                            } catch (e: OrtException) {
+                                result.error(
+                                    "SESSION_OPTIONS_ERROR",
+                                    "Failed to add session config entry $key: ${e.message}",
+                                    null,
+                                )
+                                return
+                            }
+                        }
+
                         // get list of providers, default is empty list
                         var providers = emptyList<String>()
                         if (sessionOptions.containsKey("providers")) {
@@ -251,51 +244,63 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                         // loop through the providers and add them to the ortSessionOptions
                         for (provider in providers) {
                             // add providers with default parameters
-                            when (provider) {
-                                "ACL" -> {
-                                    ortSessionOptions.addACL(true)
+                            try {
+                                when (provider) {
+                                    "ACL" -> {
+                                        ortSessionOptions.addACL(true)
+                                    }
+                                    "ARM_NN" -> {
+                                        result.error(
+                                            "INVALID_PROVIDER",
+                                            "Provider ARM_NN is not supported: the ArmNN execution provider was removed in " +
+                                                "ONNX Runtime 1.25",
+                                            null,
+                                        )
+                                        return
+                                    }
+                                    "CORE_ML" -> {
+                                        ortSessionOptions.addCoreML()
+                                    }
+                                    "CPU" -> {
+                                        ortSessionOptions.addCPU(useArena)
+                                    }
+                                    "CUDA" -> {
+                                        ortSessionOptions.addCUDA(deviceId)
+                                    }
+                                    "DIRECT_ML" -> {
+                                        ortSessionOptions.addDirectML(deviceId)
+                                    }
+                                    "DNNL" -> {
+                                        ortSessionOptions.addDnnl(useArena)
+                                    }
+                                    "NNAPI" -> {
+                                        ortSessionOptions.addNnapi()
+                                    }
+                                    "OPEN_VINO" -> {
+                                        ortSessionOptions.addOpenVINO(deviceId.toString())
+                                    }
+                                    "QNN" -> {
+                                        ortSessionOptions.addQnn(mapOf())
+                                    }
+                                    "ROCM" -> {
+                                        ortSessionOptions.addROCM(deviceId)
+                                    }
+                                    "TENSOR_RT" -> {
+                                        ortSessionOptions.addTensorrt(OrtTensorRTProviderOptions(deviceId))
+                                    }
+                                    "XNNPACK" -> {
+                                        // use an empty map as the parameter
+                                        ortSessionOptions.addXnnpack(mapOf())
+                                    }
+                                    else -> {
+                                        result.error("INVALID_PROVIDER", "Provider $provider is not supported", null)
+                                        return
+                                    }
                                 }
-                                "ARM_NN" -> {
-                                    ortSessionOptions.addArmNN(useArena)
-                                }
-                                "CORE_ML" -> {
-                                    ortSessionOptions.addCoreML()
-                                }
-                                "CPU" -> {
-                                    ortSessionOptions.addCPU(useArena)
-                                }
-                                "CUDA" -> {
-                                    ortSessionOptions.addCUDA(deviceId)
-                                }
-                                "DIRECT_ML" -> {
-                                    ortSessionOptions.addDirectML(deviceId)
-                                }
-                                "DNNL" -> {
-                                    ortSessionOptions.addDnnl(useArena)
-                                }
-                                "NNAPI" -> {
-                                    ortSessionOptions.addNnapi()
-                                }
-                                "OPEN_VINO" -> {
-                                    ortSessionOptions.addOpenVINO(deviceId.toString())
-                                }
-                                "QNN" -> {
-                                    ortSessionOptions.addQnn(mapOf())
-                                }
-                                "ROCM" -> {
-                                    ortSessionOptions.addROCM(deviceId)
-                                }
-                                "TENSOR_RT" -> {
-                                    ortSessionOptions.addTensorrt(OrtTensorRTProviderOptions(deviceId))
-                                }
-                                "XNNPACK" -> {
-                                    // use an empty map as the parameter
-                                    ortSessionOptions.addXnnpack(mapOf())
-                                }
-                                else -> {
-                                    result.error("INVALID_PROVIDER", "Provider $provider is not supported", null)
-                                    return
-                                }
+                            } catch (e: OrtException) {
+                                // same code as Linux and Windows, so createSessionFromAsset does not re-extract the model for it
+                                result.error("PROVIDER_ERROR", "Failed to add provider $provider: ${e.message}", null)
+                                return
                             }
                         }
 
@@ -329,7 +334,9 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                 }
                 "getAvailableProviders" -> {
                     val providers = OrtEnvironment.getAvailableProviders()
-                    val providerList = providers.map { mapProviderNameToEnumName(it.toString()) }.toList()
+                    // The Java enum names match the OrtProvider names, except WEBGPU (WEB_GPU in Dart), which is deliberately
+                    // left as is because createSession cannot append the WebGPU provider yet; Dart then leaves it out
+                    val providerList = providers.map { it.toString() }
                     result.success(providerList)
                 }
                 "runInference" -> {

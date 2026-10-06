@@ -21,7 +21,7 @@ For web applications, you must include the ONNX Runtime Web library in your `web
   <!-- ... other meta tags ... -->
 
   <!-- Required: Load ONNX Runtime Web before Flutter bootstrap -->
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/ort.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort.min.js"></script>
   <script src="flutter_bootstrap.js" async></script>
 </head>
 <body>
@@ -220,6 +220,14 @@ final options = OrtSessionOptions(
 final session = await ort.createSession(
   'path/to/model.onnx',
   options: options,
+);
+```
+
+`sessionConfigs` passes session config entries to ONNX Runtime as-is (`AddSessionConfigEntry`). The available keys are listed in [onnxruntime_session_options_config_keys.h](https://github.com/microsoft/onnxruntime/blob/main/include/onnxruntime/core/session/onnxruntime_session_options_config_keys.h). For example, to work around the KleidiAI memory retention on SME-capable ARM64 devices (see [troubleshooting](troubleshooting.md#kleidiai-memory-growth-on-sme-capable-arm64-devices)):
+
+```dart
+final options = OrtSessionOptions(
+  sessionConfigs: {'mlas.disable_kleidiai': '1'},
 );
 ```
 

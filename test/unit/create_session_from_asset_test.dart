@@ -28,10 +28,12 @@ class _FakePathProviderPlatform extends PathProviderPlatform with MockPlatformIn
 /// [createSession] and "fails to parse" (throws, mirroring
 /// `ORT_INVALID_PROTOBUF`) whenever the file bytes do not exactly match the
 /// bundled asset — i.e. when a truncated/corrupt cached model is reused.
+/// [errorCode] lets a test stand in for other session creation failures.
 class _FileValidatingPlatform extends FlutterOnnxruntimePlatform with MockPlatformInterfaceMixin {
-  _FileValidatingPlatform(this.expectedBytes);
+  _FileValidatingPlatform(this.expectedBytes, {this.errorCode = 'ORT_ERROR'});
 
   final Uint8List expectedBytes;
+  final String errorCode;
 
   int createSessionCallCount = 0;
   final List<int> observedFileSizes = [];
@@ -43,7 +45,7 @@ class _FileValidatingPlatform extends FlutterOnnxruntimePlatform with MockPlatfo
     observedFileSizes.add(bytes.length);
     if (!_bytesEqual(bytes, expectedBytes)) {
       throw PlatformException(
-        code: 'ORT_ERROR',
+        code: errorCode,
         message:
             'Error code - ORT_INVALID_PROTOBUF - message: '
             'Load model from $modelPath failed:Protobuf parsing failed.',
@@ -157,6 +159,33 @@ void main() {
       await expectLater(OnnxRuntime().createSessionFromAsset(assetKey), throwsA(isA<PlatformException>()));
       // Exactly one attempt: no wasteful re-extract + retry on a fresh extraction.
       expect(alwaysFail.createSessionCallCount, 1);
+    });
+
+    for (final code in ['INVALID_PROVIDER', 'PROVIDER_ERROR', 'SESSION_OPTIONS_ERROR']) {
+      test('does not re-extract or retry a cached model that fails with $code', () async {
+        // The error comes from the session options, before the model file is
+        // read, so re-extracting the model cannot fix it.
+        await File(cachedPath()).writeAsBytes(assetBytes);
+        final rejecting = _FileValidatingPlatform(Uint8List.fromList([0, 1, 2, 3]), errorCode: code);
+        FlutterOnnxruntimePlatform.instance = rejecting;
+
+        await expectLater(
+          OnnxRuntime().createSessionFromAsset(assetKey),
+          throwsA(isA<PlatformException>().having((e) => e.code, 'code', code)),
+        );
+        expect(rejecting.createSessionCallCount, 1);
+      });
+    }
+
+    test('still re-extracts and retries a cached model that fails with SESSION_CREATION_FAILED', () async {
+      // iOS and macOS report model load failures under this code instead of
+      // ORT_ERROR, so it must keep the self-healing retry.
+      await File(cachedPath()).writeAsBytes(assetBytes);
+      final rejecting = _FileValidatingPlatform(Uint8List.fromList([0, 1, 2, 3]), errorCode: 'SESSION_CREATION_FAILED');
+      FlutterOnnxruntimePlatform.instance = rejecting;
+
+      await expectLater(OnnxRuntime().createSessionFromAsset(assetKey), throwsA(isA<PlatformException>()));
+      expect(rejecting.createSessionCallCount, 2);
     });
 
     test('re-extracts when the cached model is empty (zero-byte)', () async {

@@ -48,7 +48,7 @@ public:
   ~SessionManager();
 
   // Create a new session from a model file path
-  std::string createSession(const char *model_path, void *options);
+  std::string createSession(const char *model_path, const Ort::SessionOptions &session_options);
 
   // Close and remove a session
   bool closeSession(const std::string &session_id);
