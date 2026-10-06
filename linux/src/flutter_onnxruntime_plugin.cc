@@ -72,6 +72,7 @@ static std::string mapProviderNameToEnumName(const std::string &providerName) {
       {"CPUExecutionProvider", "CPU"},
       {"CUDAExecutionProvider", "CUDA"},
       {"TensorrtExecutionProvider", "TENSOR_RT"},
+      {"AzureExecutionProvider", "AZURE"},
       {"MIGraphXExecutionProvider", "MIGRAPHX"},
       {"ROCMExecutionProvider", "ROCM"},
       {"CoreMLExecutionProvider", "CORE_ML"},

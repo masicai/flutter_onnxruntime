@@ -163,28 +163,6 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
         }
     }
 
-    /**
-     * Map provider name to enum name
-     */
-    private fun mapProviderNameToEnumName(providerName: String): String {
-        return when (providerName) {
-            "ACL" -> "ACL"
-            "ARM_NN" -> "ARM_NN"
-            "CORE_ML" -> "CORE_ML"
-            "CPU" -> "CPU"
-            "CUDA" -> "CUDA"
-            "DIRECT_ML" -> "DIRECT_ML"
-            "DNNL" -> "DNNL"
-            "NNAPI" -> "NNAPI"
-            "OPEN_VINO" -> "OPEN_VINO"
-            "QNN" -> "QNN"
-            "ROCM" -> "ROCM"
-            "TENSOR_RT" -> "TENSOR_RT"
-            "XNNPACK" -> "XNNPACK"
-            else -> providerName
-        }
-    }
-
     override fun onAttachedToEngine(
         @NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding,
     ) {
@@ -340,7 +318,9 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                 }
                 "getAvailableProviders" -> {
                     val providers = OrtEnvironment.getAvailableProviders()
-                    val providerList = providers.map { mapProviderNameToEnumName(it.toString()) }.toList()
+                    // The Java enum names match the OrtProvider names, except WEBGPU (WEB_GPU in Dart), which is deliberately
+                    // left as is because createSession cannot append the WebGPU provider yet; Dart then leaves it out
+                    val providerList = providers.map { it.toString() }
                     result.success(providerList)
                 }
                 "runInference" -> {
