@@ -2,6 +2,13 @@
 
 Common issues and their solutions.
 
+## Known issues in ONNX Runtime 1.28
+
+### KleidiAI memory growth on SME-capable ARM64 devices
+[microsoft/onnxruntime#29538](https://github.com/microsoft/onnxruntime/issues/29538), unfixed upstream. On devices with SME/SME2 (Apple M4 and later, A19-class iPhones, SME2 Android SoCs), each inference thread keeps KleidiAI MatMul buffers sized for the largest input shape it has seen, so memory grows with varying input shapes and is never returned. The convolution part of this regression ([#66](https://github.com/masicai/flutter_onnxruntime/issues/66)) is fixed in 1.28. If memory still grows, disable KleidiAI, which is slower:
+```dart
+OrtSessionOptions(sessionConfigs: {'mlas.disable_kleidiai': '1'})
+```
 
 ## Android
 * `OrtProvider.ARM_NN` fails with `INVALID_PROVIDER`: the ArmNN execution provider was removed in ONNX Runtime 1.25. Use `XNNPACK`, `NNAPI` or `CPU` instead.
