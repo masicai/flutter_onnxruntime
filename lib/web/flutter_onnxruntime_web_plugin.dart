@@ -165,6 +165,10 @@ class FlutterOnnxruntimeWebPlugin extends FlutterOnnxruntimePlatform {
         jsOptions.setProperty('graphOptimizationLevel'.toJS, options['graphOptimizationLevel']);
       }
 
+      if (options.containsKey('useArena')) {
+        jsOptions.setProperty('enableCpuMemArena'.toJS, (options['useArena'] as bool).toJS);
+      }
+
       // Session config entries go through `extra`, which onnxruntime-web passes key by key to AddSessionConfigEntry
       if (options.containsKey('sessionConfigs')) {
         jsOptions.setProperty('extra'.toJS, (options['sessionConfigs'] as Map<String, String>).jsify());

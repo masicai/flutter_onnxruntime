@@ -754,22 +754,29 @@ void main() {
       );
     });
 
-    testWidgets('Create session with session configs', (WidgetTester tester) async {
-      final session = await onnxRuntime.createSessionFromAsset(
-        'assets/models/addition_model.ort',
-        options: OrtSessionOptions(sessionConfigs: {'mlas.disable_kleidiai': '1'}),
-      );
-      final inputs = {
-        'A': await OrtValue.fromList([1.0, 2.0], [2]),
-        'B': await OrtValue.fromList([3.0, 4.0], [2]),
-      };
-      final outputs = await session.run(inputs);
-      expect(await outputs['C']!.asFlattenedList(), [4.0, 6.0]);
-      for (final value in [...inputs.values, ...outputs.values]) {
-        await value.dispose();
-      }
-      await session.close();
-    });
+    // Options that must leave the model working
+    final workingOptions = {
+      'session configs': OrtSessionOptions(sessionConfigs: {'mlas.disable_kleidiai': '1'}),
+      'the CPU memory arena disabled': OrtSessionOptions(useArena: false),
+    };
+    for (final entry in workingOptions.entries) {
+      testWidgets('Create session with ${entry.key}', (WidgetTester tester) async {
+        final session = await onnxRuntime.createSessionFromAsset(
+          'assets/models/addition_model.ort',
+          options: entry.value,
+        );
+        final inputs = {
+          'A': await OrtValue.fromList([1.0, 2.0], [2]),
+          'B': await OrtValue.fromList([3.0, 4.0], [2]),
+        };
+        final outputs = await session.run(inputs);
+        expect(await outputs['C']!.asFlattenedList(), [4.0, 6.0]);
+        for (final value in [...inputs.values, ...outputs.values]) {
+          await value.dispose();
+        }
+        await session.close();
+      });
+    }
 
     testWidgets('Session configs reach ONNX Runtime', (WidgetTester tester) async {
       // Forcing the ONNX format onto an ORT-format model can only fail if the config entry is applied

@@ -234,6 +234,13 @@ static FlMethodResponse *create_session(FlutterOnnxruntimePlugin *self, FlValue 
       }
     }
 
+    // The CPU memory arena is on by default in ONNX Runtime, so only an explicit false changes anything
+    auto use_arena_val = options_map.find("useArena");
+    if (use_arena_val != options_map.end() && fl_value_get_type(use_arena_val->second) == FL_VALUE_TYPE_BOOL &&
+        !fl_value_get_bool(use_arena_val->second)) {
+      session_options.DisableCpuMemArena();
+    }
+
     // get the device id, if not provided, set to 0
     int device_id = 0;
     auto device_id_val = options_map.find("deviceId");

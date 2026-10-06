@@ -96,7 +96,8 @@ class OrtSessionOptions {
   // set a list of providers, if one provider is not available, ORT will fallback to the next provider in the list
   // for example: [OrtProvider.CUDA, OrtProvider.CPU]
   final List<OrtProvider>? providers;
-  // arena allocator for memory management, default is true
+  // arena allocator for memory management, default is true. Has no effect on iOS and macOS, where the ONNX Runtime
+  // Objective-C API cannot turn the arena off
   final bool? useArena;
   // set the device id for the session, default is 0
   final int? deviceId;

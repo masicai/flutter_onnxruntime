@@ -466,6 +466,13 @@ void FlutterOnnxruntimePlugin::HandleCreateSession(
         }
       }
 
+      // The CPU memory arena is on by default in ONNX Runtime, so only an explicit false changes anything
+      auto use_arena_it = options_map.find(flutter::EncodableValue("useArena"));
+      if (use_arena_it != options_map.end() && std::holds_alternative<bool>(use_arena_it->second) &&
+          !std::get<bool>(use_arena_it->second)) {
+        session_options.DisableCpuMemArena();
+      }
+
       // Get the device ID, if not provided, set to 0
       int device_id = 0;
       auto device_id_it = options_map.find(flutter::EncodableValue("deviceId"));
