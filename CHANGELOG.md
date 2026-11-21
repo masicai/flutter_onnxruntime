@@ -1,3 +1,10 @@
+## Unreleased
+* Windows: run session creation, inference, and tensor operations on a
+  background worker thread and reply on the platform thread. Android, iOS, and
+  macOS already use a background task queue; the Windows plugin previously
+  blocked the Win32 message loop, which made the host application window
+  unresponsive while inference was running.
+
 ## 1.9.0
 * Upgrade ONNX Runtime to 1.28.x across the platforms
 * Allow passing session config entries to ONNX Runtime

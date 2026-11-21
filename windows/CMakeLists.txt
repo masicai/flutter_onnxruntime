@@ -151,7 +151,7 @@ add_definitions(-DWIN32_LEAN_AND_MEAN -DNOMINMAX -DUNICODE -D_UNICODE)
 
 # Any new source files that you add to the plugin should be added here.
 list(APPEND PLUGIN_SOURCES "src/session_manager.cc" "src/value_conversion.cc" "src/tensor_manager.cc"
-     "src/windows_utils.cc")
+     "src/windows_utils.cc" "src/platform_thread_pump.cc")
 
 # Define the plugin library target. Its name must not be changed (see comment on PLUGIN_NAME above).
 add_library(${PLUGIN_NAME} SHARED "flutter_onnxruntime_plugin.cpp" "flutter_onnxruntime_plugin.h" ${PLUGIN_SOURCES})
