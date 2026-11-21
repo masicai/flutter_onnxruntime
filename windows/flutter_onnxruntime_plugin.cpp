@@ -17,10 +17,17 @@
 #include <flutter/plugin_registrar_windows.h>
 #include <flutter/standard_method_codec.h>
 
+#include <atomic>
+#include <exception>
+#include <functional>
 #include <memory>
 #include <sstream>
+#include <string>
+#include <utility>
 
 // Include our implementation headers
+#include "src/deferred_method_result.h"
+#include "src/platform_thread_pump.h"
 #include "src/session_manager.h"
 #include "src/tensor_manager.h"
 #include "src/value_conversion.h"
@@ -55,9 +62,13 @@ void FlutterOnnxruntimePlugin::RegisterWithRegistrar(flutter::PluginRegistrarWin
   registrar->AddPlugin(std::move(plugin));
 }
 
-FlutterOnnxruntimePlugin::FlutterOnnxruntimePlugin() : impl_(std::make_unique<FlutterOnnxruntimePluginImpl>()) {}
+FlutterOnnxruntimePlugin::FlutterOnnxruntimePlugin()
+    : impl_(std::make_unique<FlutterOnnxruntimePluginImpl>()),
+      pump_(std::make_unique<PlatformThreadPump>()) {
+  pump_->Start();
+}
 
-FlutterOnnxruntimePlugin::~FlutterOnnxruntimePlugin() {}
+FlutterOnnxruntimePlugin::~FlutterOnnxruntimePlugin() { pump_->Stop(); }
 
 void FlutterOnnxruntimePlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
@@ -77,46 +88,132 @@ void FlutterOnnxruntimePlugin::HandleMethodCall(
     return;
   }
 
-  // OrtValue-related methods
-  if (method_name == "createOrtValue") {
-    HandleCreateOrtValue(method_call, std::move(result));
-    return;
-  } else if (method_name == "convertOrtValue") {
-    HandleConvertOrtValue(method_call, std::move(result));
-    return;
-  } else if (method_name == "getOrtValueData") {
-    HandleGetOrtValueData(method_call, std::move(result));
-    return;
-  } else if (method_name == "releaseOrtValue") {
-    HandleReleaseOrtValue(method_call, std::move(result));
-    return;
-  }
-
-  // Session-related methods
+  // Every method that touches the session or tensor managers runs on the
+  // worker. ONNX Runtime calls can take hundreds of milliseconds, and the
+  // platform thread is also the Win32 message loop, so running them inline
+  // freezes the window. Serializing all of them on one thread also keeps the
+  // manager state single-threaded (the Android plugin does the same with a
+  // background task queue plus a lock).
   if (method_name == "createSession") {
-    HandleCreateSession(method_call, std::move(result));
+    DispatchToWorker(method_call, std::move(result),
+                     &FlutterOnnxruntimePlugin::HandleCreateSession);
     return;
   } else if (method_name == "getAvailableProviders") {
-    HandleGetAvailableProviders(method_call, std::move(result));
+    DispatchToWorker(method_call, std::move(result),
+                     &FlutterOnnxruntimePlugin::HandleGetAvailableProviders);
     return;
   } else if (method_name == "runInference") {
-    HandleRunInference(method_call, std::move(result));
+    DispatchToWorker(method_call, std::move(result),
+                     &FlutterOnnxruntimePlugin::HandleRunInference);
     return;
   } else if (method_name == "closeSession") {
-    HandleCloseSession(method_call, std::move(result));
+    DispatchToWorker(method_call, std::move(result),
+                     &FlutterOnnxruntimePlugin::HandleCloseSession);
     return;
   } else if (method_name == "getMetadata") {
-    HandleGetMetadata(method_call, std::move(result));
+    DispatchToWorker(method_call, std::move(result),
+                     &FlutterOnnxruntimePlugin::HandleGetMetadata);
     return;
   } else if (method_name == "getInputInfo") {
-    HandleGetInputInfo(method_call, std::move(result));
+    DispatchToWorker(method_call, std::move(result),
+                     &FlutterOnnxruntimePlugin::HandleGetInputInfo);
     return;
   } else if (method_name == "getOutputInfo") {
-    HandleGetOutputInfo(method_call, std::move(result));
+    DispatchToWorker(method_call, std::move(result),
+                     &FlutterOnnxruntimePlugin::HandleGetOutputInfo);
+    return;
+  } else if (method_name == "createOrtValue") {
+    DispatchToWorker(method_call, std::move(result),
+                     &FlutterOnnxruntimePlugin::HandleCreateOrtValue);
+    return;
+  } else if (method_name == "convertOrtValue") {
+    DispatchToWorker(method_call, std::move(result),
+                     &FlutterOnnxruntimePlugin::HandleConvertOrtValue);
+    return;
+  } else if (method_name == "getOrtValueData") {
+    DispatchToWorker(method_call, std::move(result),
+                     &FlutterOnnxruntimePlugin::HandleGetOrtValueData);
+    return;
+  } else if (method_name == "releaseOrtValue") {
+    DispatchToWorker(method_call, std::move(result),
+                     &FlutterOnnxruntimePlugin::HandleReleaseOrtValue);
     return;
   }
 
   result->NotImplemented();
+}
+
+void FlutterOnnxruntimePlugin::DispatchToWorker(
+    const flutter::MethodCall<flutter::EncodableValue> &method_call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result,
+    PluginHandler handler) {
+  PlatformThreadPump *pump = pump_.get();
+  if (!pump->IsRunning()) {
+    // The platform-thread pump could not start (for example, window creation
+    // failed). Keep the plugin functional and accept the stall rather than
+    // leaving every call unanswered.
+    (this->*handler)(method_call, std::move(result));
+    return;
+  }
+
+  // MethodCall owns its arguments through a unique_ptr, so the handler gets a
+  // rebuilt call on the worker with a copy of the arguments. The copy is held
+  // in a shared_ptr because the queued task must stay copyable.
+  std::string method_name = method_call.method_name();
+  std::shared_ptr<flutter::EncodableValue> arguments;
+  if (method_call.arguments() != nullptr) {
+    arguments =
+        std::make_shared<flutter::EncodableValue>(*method_call.arguments());
+  }
+
+  // A method call must be answered exactly once. The state guards the reply
+  // and keeps the real result alive until the platform-thread completion runs.
+  struct CompletionState {
+    std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>> target;
+    std::atomic<bool> completed{false};
+  };
+  auto state = std::make_shared<CompletionState>();
+  state->target =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          result.release());
+
+  pump->PostTask([this, pump, state, handler,
+                  method_name = std::move(method_name),
+                  arguments = std::move(arguments)]() mutable {
+    std::unique_ptr<flutter::EncodableValue> call_arguments;
+    if (arguments != nullptr) {
+      call_arguments =
+          std::make_unique<flutter::EncodableValue>(*arguments);
+    }
+    flutter::MethodCall<flutter::EncodableValue> call(
+        method_name, std::move(call_arguments));
+    auto deferred = std::make_unique<DeferredMethodResult>(
+        [pump, state](std::function<void(
+                           flutter::MethodResult<flutter::EncodableValue> &)>
+                          completion) {
+          if (state->completed.exchange(true)) {
+            return;
+          }
+          pump->PostCompletion([state, completion = std::move(completion)]()
+                                   mutable { completion(*state->target); });
+        });
+    try {
+      (this->*handler)(call, std::move(deferred));
+    } catch (const std::exception &error) {
+      if (!state->completed.exchange(true)) {
+        std::string message = error.what();
+        pump->PostCompletion([state, message = std::move(message)]() {
+          state->target->Error("PLUGIN_ERROR", message);
+        });
+      }
+    } catch (...) {
+      if (!state->completed.exchange(true)) {
+        pump->PostCompletion([state]() {
+          state->target->Error("INTERNAL_ERROR", "Unknown error occurred");
+        });
+      }
+    }
+  });
 }
 
 void FlutterOnnxruntimePlugin::HandleCreateOrtValue(
