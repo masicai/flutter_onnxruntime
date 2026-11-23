@@ -1,3 +1,7 @@
+## 1.9.1
+* Fix clean iOS/macOS SPM builds failing to download `onnxruntime_extensions` from `download.onnxruntime.ai`, which has been unavailable since 2026-11-20 (#83)
+* Recommend Swift Package Manager for iOS/macOS and document the Microsoft download outage (#80, #83)
+
 ## 1.9.0
 * Upgrade ONNX Runtime to 1.28.x across the platforms
 * Allow passing session config entries to ONNX Runtime
