@@ -14,12 +14,15 @@ let package = Package(
   dependencies: [
     // Pinned exactly so the vendored internal headers in
     // Sources/flutter_onnxruntime_objc/vendor/ always match the resolved package.
-    // masicai fork pinning ORT 1.28.0 (fork tag 1.28.0). Microsoft's SPM repo has
+    // masicai fork pinning ORT 1.28.0 (fork tag 1.28.1). Microsoft's SPM repo has
     // no 1.28.x tag, and its framework-format binary gets embedded by Xcode, which
     // App Store Connect rejects (ITMS-90208, issue #71). The fork ships the same
     // binary repackaged as a library-format xcframework, so keep it until upstream
-    // fixes the artifact format.
-    .package(url: "https://github.com/masicai/onnxruntime-swift-package-manager", exact: "1.28.0")
+    // fixes the artifact format. Fork tag 1.28.1 has the same binary as 1.28.0 but
+    // drops the unused onnxruntime_extensions target. That target's binary was on
+    // download.onnxruntime.ai, which is gone, and SwiftPM downloads every binary
+    // target of a package, so it broke clean resolves (issue #83).
+    .package(url: "https://github.com/masicai/onnxruntime-swift-package-manager", exact: "1.28.1")
   ],
   targets: [
     // Swift target. `import FlutterMacOS` resolves implicitly through the
