@@ -15,7 +15,7 @@ Native Wrapper Flutter Plugin for ONNX Runtime
 | Platform | ONNX Runtime | Source |
 |----------|:------------:|--------|
 | Android | **1.28.0** | Maven `com.microsoft.onnxruntime:onnxruntime-android` |
-| iOS, macOS | **1.28.0** | CocoaPods `onnxruntime-objc`, or Swift Package Manager |
+| iOS, macOS | **1.28.0** | Swift Package Manager (recommended), or CocoaPods `onnxruntime-objc` |
 | Linux, Windows | **1.28.3** | Official GitHub release, downloaded at build time|
 | Web | chosen by your app | `onnxruntime-web` script tag in `web/index.html`|
 
@@ -141,51 +141,26 @@ or running the below command from your terminal:
 
 Refer to [troubleshooting.md](doc/troubleshooting.md) for more information.
 
-### iOS
+### iOS and macOS
 
-ONNX Runtime requires minimum version `iOS 16` and static linkage.
+ONNX Runtime requires at least iOS 16 and macOS 14. Open `ios/Runner.xcworkspace` or `macos/Runner.xcworkspace` in Xcode, then in `Runner` → `General` set `Minimum Deployments` to `16.0` (iOS) or `14.0` (macOS).
 
-The plugin supports both CocoaPods (default) and Swift Package Manager. With Swift Package Manager enabled (see [below](#swift-package-manager-ios-and-macos)), no Podfile changes are needed, but the app's iOS "Minimum Deployments" must be at least `16.0` (Xcode enforces the plugin's minimum platform under SPM).
-
-For CocoaPods, in `ios/Podfile`, change the following lines:
-```bash
-platform :ios, '16.0'
-
-# existing code ...
-
-use_frameworks! :linkage => :static
-
-# existing code ...
-```
-
-### macOS
-
-macOS build requires minimum version `macOS 14`.
-
-* For CocoaPods, in `macos/Podfile`, change the following lines:
-  ```bash
-  platform :osx, '14.0'
-  ```
-
-* Change the "Minimum Deployments" to 14.0 in XCode. In your terminal:
-  ```bash
-  open Runner.xcworkspace
-  ```
-  In `Runner` -> `General`, change `Minimum Deployments` to `14.0`.
-
-### Swift Package Manager (iOS and macOS)
-
-The plugin supports [Flutter's Swift Package Manager integration](https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-app-developers), which is opt-in on Flutter 3.24+:
+Use [Swift Package Manager](https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-app-developers) (SPM). It needs no Podfile changes. Flutter 3.44 and later turn it on by default. On Flutter 3.24 to 3.41, turn it on with:
 
 ```bash
 flutter config --enable-swift-package-manager
 ```
 
-Both install paths ship the same ONNX Runtime version and behave identically. CocoaPods remains fully supported and is used automatically when the flag is off or on older Flutter versions.
+CocoaPods still works, but we no longer recommend it:
+- Flutter has made SPM the default.
+- CocoaPods trunk becomes read-only on 2 December 2026.
+- A clean `pod install` currently fails because Microsoft's download host is down (see the [Microsoft download outage](doc/troubleshooting.md#microsoft-download-outage-november-2026)).
+
+If you stay on CocoaPods, see [CocoaPods setup](doc/troubleshooting.md#cocoapods-setup) for the Podfile changes.
 
 ### Linux and Windows
 
-The build downloads ONNX Runtime 1.28.3 from the official GitHub release. To use another version, set `ONNXRUNTIME_VERSION` as a plain variable in your app's `linux/CMakeLists.txt` or `windows/CMakeLists.txt`, anywhere before the `include(flutter/generated_plugins.cmake)` line:
+The build downloads ONNX Runtime 1.28.3 from the official GitHub release. Those downloads are currently down, so clean builds fail (see the [Microsoft download outage](doc/troubleshooting.md#microsoft-download-outage-november-2026)). To use another version, set `ONNXRUNTIME_VERSION` as a plain variable in your app's `linux/CMakeLists.txt` or `windows/CMakeLists.txt`, anywhere before the `include(flutter/generated_plugins.cmake)` line:
 
 ```cmake
 set(ONNXRUNTIME_VERSION "1.22.0")
