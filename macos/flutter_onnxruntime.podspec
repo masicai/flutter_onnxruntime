@@ -25,9 +25,11 @@ Flutter plugin for running ONNX models with the native ONNX Runtime, supporting 
 
   s.dependency 'FlutterMacOS'
   # Add ONNX Runtime dependency for macOS.
-  # Keep this version in lockstep with the `onnxruntime-swift-package-manager`
-  # pin in flutter_onnxruntime/Package.swift so CocoaPods and SPM resolve the
-  # same ORT (and the vendored internal headers stay matched).
+  # Keep this version in lockstep with the ORT version that the
+  # `onnxruntime-swift-package-manager` pin in flutter_onnxruntime/Package.swift
+  # ships, so CocoaPods and SPM resolve the same ORT (and the vendored internal
+  # headers stay matched). Fork tags can differ from the ORT version: fork tag
+  # 1.28.1 ships ORT 1.28.0 (see the fork's README).
   # 1.28.0: first ORT with the KleidiAI conv memory fix (microsoft/onnxruntime#28571)
   # for the 1.24.x regression in #29538. Stay below 1.29, which turns on telemetry
   # by default. Mobile ORT ships minor releases only, so there is no 1.28.x patch.
