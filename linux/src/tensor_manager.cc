@@ -151,7 +151,7 @@ std::string TensorManager::createStringTensor(const std::vector<std::string> &da
     std::string tensor_id = generateTensorId();
 
     // Create a C-style array of const char* for ONNX Runtime
-    const char **tensor_data = new const char *[data.size()];
+    std::vector<const char *> tensor_data(data.size());
     for (size_t i = 0; i < data.size(); i++) {
       tensor_data[i] = data[i].c_str();
     }
@@ -164,9 +164,7 @@ std::string TensorManager::createStringTensor(const std::vector<std::string> &da
     auto tensor = Ort::Value::CreateTensor(allocator, shape.data(), shape.size(), ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING);
 
     // Fill the tensor with string data
-    Ort::ThrowOnError(Ort::GetApi().FillStringTensor(tensor, tensor_data, data.size()));
-
-    delete[] tensor_data;
+    Ort::ThrowOnError(Ort::GetApi().FillStringTensor(tensor, tensor_data.data(), data.size()));
 
     tensors_[tensor_id] = std::make_unique<Ort::Value>(std::move(tensor));
     tensor_types_[tensor_id] = "string";
@@ -341,8 +339,11 @@ void TensorManager::storeTensor(const std::string &tensor_id, Ort::Value &&tenso
     // Get and store the tensor type
     ONNXTensorElementDataType element_type = tensor_info.GetElementType();
     tensor_types_[tensor_id] = SessionManager::getElementTypeString(element_type);
-  } catch (const std::exception &e) {
-    // Handle exception - maybe log it
+  } catch (const std::exception &) {
+    tensors_.erase(tensor_id);
+    tensor_shapes_.erase(tensor_id);
+    tensor_types_.erase(tensor_id);
+    throw;
   }
 }
 
@@ -823,7 +824,7 @@ ClonedTensor TensorManager::cloneTensorLocked(const std::string &tensor_id) {
     }
 
     // Create a C-style array of const char* for ONNX Runtime
-    const char **new_tensor_data = new const char *[data_vec.size()];
+    std::vector<const char *> new_tensor_data(data_vec.size());
     for (size_t i = 0; i < data_vec.size(); i++) {
       new_tensor_data[i] = data_vec[i].c_str();
     }
@@ -835,8 +836,7 @@ ClonedTensor TensorManager::cloneTensorLocked(const std::string &tensor_id) {
     auto new_tensor =
         Ort::Value::CreateTensor(allocator, shape.data(), shape.size(), ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING);
     // Fill the tensor with string data
-    Ort::ThrowOnError(Ort::GetApi().FillStringTensor(new_tensor, new_tensor_data, data_vec.size()));
-    delete[] new_tensor_data;
+    Ort::ThrowOnError(Ort::GetApi().FillStringTensor(new_tensor, new_tensor_data.data(), data_vec.size()));
 
     // String tensors use ORT's allocator, no external buffer needed
     ClonedTensor result;

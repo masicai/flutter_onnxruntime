@@ -844,7 +844,7 @@ ClonedTensor TensorManager::cloneTensorLocked(const std::string &tensor_id) {
       data_vec.push_back(s);
     }
     // Create a C-style array of const char* for ONNX Runtime
-    const char **new_tensor_data = new const char *[data_vec.size()];
+    std::vector<const char *> new_tensor_data(data_vec.size());
     for (size_t i = 0; i < data_vec.size(); i++) {
       new_tensor_data[i] = data_vec[i].c_str();
     }
@@ -854,8 +854,7 @@ ClonedTensor TensorManager::cloneTensorLocked(const std::string &tensor_id) {
     Ort::ThrowOnError(Ort::GetApi().GetAllocatorWithDefaultOptions(&allocator));
     auto new_tensor =
         Ort::Value::CreateTensor(allocator, shape.data(), shape.size(), ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING);
-    Ort::ThrowOnError(Ort::GetApi().FillStringTensor(new_tensor, new_tensor_data, data_vec.size()));
-    delete[] new_tensor_data;
+    Ort::ThrowOnError(Ort::GetApi().FillStringTensor(new_tensor, new_tensor_data.data(), data_vec.size()));
 
     // String tensors use ORT's allocator, no external buffer needed
     ClonedTensor result;
