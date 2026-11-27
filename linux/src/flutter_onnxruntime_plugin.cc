@@ -108,9 +108,12 @@ static void flutter_onnxruntime_plugin_init(FlutterOnnxruntimePlugin *self) {
 static void flutter_onnxruntime_plugin_dispose(GObject *object) {
   FlutterOnnxruntimePlugin *self = FLUTTER_ONNXRUNTIME_PLUGIN(object);
 
-  // Clean up session manager, tensor manager and values
-  delete self->session_manager;
+  // Clean up tensor manager before session manager so output tensors
+  // referencing session allocators are freed while sessions are still alive.
   delete self->tensor_manager;
+  self->tensor_manager = nullptr;
+  delete self->session_manager;
+  self->session_manager = nullptr;
 
   std::lock_guard<std::mutex> lock(self->mutex);
   self->values.clear();
@@ -189,7 +192,8 @@ static void flutter_onnxruntime_plugin_handle_method_call(FlutterOnnxruntimePlug
 static FlMethodResponse *get_platform_version() {
   struct utsname uname_data = {};
   uname(&uname_data);
-  return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_string(uname_data.version)));
+  g_autoptr(FlValue) version = fl_value_new_string(uname_data.version);
+  return FL_METHOD_RESPONSE(fl_method_success_response_new(version));
 }
 
 static FlMethodResponse *create_session(FlutterOnnxruntimePlugin *self, FlValue *args) {
@@ -487,35 +491,45 @@ static FlMethodResponse *run_inference(FlutterOnnxruntimePlugin *self, FlValue *
 
     // Process outputs
     g_autoptr(FlValue) outputs_map = fl_value_new_map();
+    std::vector<std::string> published_ids;
+    published_ids.reserve(output_tensors.size());
 
-    // For each output tensor, directly store it using TensorManager's storeTensor
-    for (size_t i = 0; i < output_tensors.size(); i++) {
-      // Create a tensor ID
-      std::string value_id = self->tensor_manager->generateTensorId();
+    try {
+      // For each output tensor, directly store it using TensorManager's storeTensor
+      for (size_t i = 0; i < output_tensors.size(); i++) {
+        // Create a tensor ID
+        std::string value_id = self->tensor_manager->generateTensorId();
 
-      // Store the tensor directly using storeTensor - this transfers ownership
-      self->tensor_manager->storeTensor(value_id, std::move(output_tensors[i]));
+        // Store the tensor directly using storeTensor - this transfers ownership
+        self->tensor_manager->storeTensor(value_id, std::move(output_tensors[i]));
+        published_ids.push_back(value_id);
 
-      // get the tensor type and shape from tensor manager
-      // Note: only do this after storeTensor get the tensor registered in tensor manager
-      std::string tensor_type = self->tensor_manager->getTensorType(value_id);
-      std::vector<int64_t> shape = self->tensor_manager->getTensorShape(value_id);
+        // get the tensor type and shape from tensor manager
+        // Note: only do this after storeTensor get the tensor registered in tensor manager
+        std::string tensor_type = self->tensor_manager->getTensorType(value_id);
+        std::vector<int64_t> shape = self->tensor_manager->getTensorShape(value_id);
 
-      // Add the value ID to the outputs map
-      FlValue *shape_list = fl_value_new_list();
-      for (const auto &dim : shape) {
-        fl_value_append_take(shape_list, fl_value_new_int(dim));
+        // Add the value ID to the outputs map
+        FlValue *shape_list = fl_value_new_list();
+        for (const auto &dim : shape) {
+          fl_value_append_take(shape_list, fl_value_new_int(dim));
+        }
+
+        // Note: Flutter does not allow return a nested map, so we have to use list here to keep the output_info format
+        FlValue *output_info = fl_value_new_list();
+        fl_value_append_take(output_info, fl_value_new_string(value_id.c_str()));
+        fl_value_append_take(output_info, fl_value_new_string(tensor_type.c_str()));
+        fl_value_append_take(output_info, shape_list);
+
+        fl_value_set_string_take(outputs_map, output_names[i].c_str(), output_info);
       }
-
-      // Note: Flutter does not allow return a nested map, so we have to use list here to keep the output_info format
-      FlValue *output_info = fl_value_new_list();
-      fl_value_append_take(output_info, fl_value_new_string(value_id.c_str()));
-      fl_value_append_take(output_info, fl_value_new_string(tensor_type.c_str()));
-      fl_value_append_take(output_info, shape_list);
-
-      fl_value_set_string_take(outputs_map, output_names[i].c_str(), output_info);
+      return FL_METHOD_RESPONSE(fl_method_success_response_new(outputs_map));
+    } catch (...) {
+      for (const auto &id : published_ids) {
+        self->tensor_manager->releaseTensor(id);
+      }
+      throw;
     }
-    return FL_METHOD_RESPONSE(fl_method_success_response_new(outputs_map));
   } catch (const Ort::Exception &e) {
     return FL_METHOD_RESPONSE(fl_method_error_response_new("INFERENCE_ERROR", e.what(), nullptr));
   } catch (const std::exception &e) {
@@ -538,7 +552,7 @@ static FlMethodResponse *close_session(FlutterOnnxruntimePlugin *self, FlValue *
 
   self->session_manager->closeSession(session_id);
 
-  return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_null()));
+  return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
 }
 
 static FlMethodResponse *get_metadata(FlutterOnnxruntimePlugin *self, FlValue *args) {
@@ -886,23 +900,16 @@ static FlMethodResponse *get_ort_value_data(FlutterOnnxruntimePlugin *self, FlVa
 
   const char *value_id = fl_value_get_string(value_id_value);
 
-  FlValue *tensor_data = nullptr;
   try {
-    tensor_data = self->tensor_manager->getTensorData(value_id);
+    g_autoptr(FlValue) tensor_data = self->tensor_manager->getTensorData(value_id);
 
     // If tensor_data is null, it means tensor wasn't found or is invalid
     if (tensor_data == nullptr || fl_value_get_type(tensor_data) == FL_VALUE_TYPE_NULL) {
-      if (tensor_data != nullptr) {
-        fl_value_unref(tensor_data);
-      }
       return FL_METHOD_RESPONSE(
           fl_method_error_response_new("INVALID_VALUE", "Tensor not found or already being disposed", nullptr));
     }
-    return FL_METHOD_RESPONSE(fl_method_success_response_new(tensor_data)); // tensor_data ownership transferred
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(tensor_data));
   } catch (const std::exception &e) {
-    if (tensor_data != nullptr) {
-      fl_value_unref(tensor_data);
-    }
     return FL_METHOD_RESPONSE(fl_method_error_response_new("DATA_EXTRACTION_ERROR", e.what(), nullptr));
   }
 }
@@ -918,5 +925,5 @@ static FlMethodResponse *release_ort_value(FlutterOnnxruntimePlugin *self, FlVal
 
   self->tensor_manager->releaseTensor(value_id);
 
-  return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_null()));
+  return FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
 }
